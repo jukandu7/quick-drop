@@ -145,6 +145,39 @@ class OwnerAccessFilterTests {
         assertThat(chain.getRequest()).isSameAs(request);
     }
 
+    @Test
+    void senderPageAndUploadsRemainPublic() throws Exception {
+        MockHttpServletRequest pageRequest = request(
+                "GET",
+                "/send",
+                "192.168.1.25"
+        );
+        MockFilterChain pageChain = new MockFilterChain();
+
+        filter.doFilter(
+                pageRequest,
+                new MockHttpServletResponse(),
+                pageChain
+        );
+
+        assertThat(pageChain.getRequest()).isSameAs(pageRequest);
+
+        MockHttpServletRequest uploadRequest = request(
+                "POST",
+                "/send/upload",
+                "192.168.1.25"
+        );
+        MockFilterChain uploadChain = new MockFilterChain();
+
+        filter.doFilter(
+                uploadRequest,
+                new MockHttpServletResponse(),
+                uploadChain
+        );
+
+        assertThat(uploadChain.getRequest()).isSameAs(uploadRequest);
+    }
+
     private MockHttpServletRequest request(
             String method,
             String path,

@@ -19,11 +19,12 @@
         }
 
         body {
+            background: #eef4ff;
             font-size: 1rem;
             line-height: 1.5;
-            margin: 2rem auto;
-            max-width: 40rem;
-            padding: 0 1rem;
+            margin: 0;
+            min-height: 100vh;
+            padding: 2rem 1rem;
         }
 
         button,
@@ -51,8 +52,34 @@
             font-size: 1.5rem;
         }
 
+        .sender-shell {
+            background: white;
+            border: 1px solid #c8d7ef;
+            border-radius: 1rem;
+            box-shadow: 0 0.75rem 2rem rgba(39, 73, 125, 0.12);
+            box-sizing: border-box;
+            margin: 0 auto;
+            max-width: 40rem;
+            padding: 2rem;
+        }
+
+        .sender-label {
+            color: #2459a9;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .sender-boundary {
+            background: #eef5ff;
+            border-left: 0.3rem solid #3977d5;
+            padding: 0.75rem 1rem;
+        }
+
         #receive-drop-zone {
-            border: 2px dashed #777;
+            background: #f8fbff;
+            border: 2px dashed #5b78a5;
             border-radius: 0.75rem;
             margin: 1rem 0;
             padding: 2rem 1rem;
@@ -62,6 +89,14 @@
         #receive-drop-zone.drag-over {
             background: #e8f1ff;
             border-color: #2869d8;
+        }
+
+        button {
+            background: #2459a9;
+            border: 0;
+            border-radius: 0.45rem;
+            color: white;
+            padding: 0.65rem 1rem;
         }
 
         .receive-upload-item {
@@ -76,18 +111,26 @@
     </style>
 </head>
 <body>
-<h1>Send files to Quick Drop</h1>
-
-<main th:if="${active}">
-    <p>
-        Choose or drop files below. You cannot see or manage the files
-        already stored on this Quick Drop.
+<main class="sender-shell">
+<header>
+    <p class="sender-label" th:text="${senderLabel}">Sender page</p>
+    <h1 th:text="${senderHeading}">Send files to Quick Drop</h1>
+    <p th:text="${senderDescription}">
+        This page can only send files.
     </p>
-    <p><strong th:text="${expirationLabel}"></strong></p>
-    <p>Received files are kept for 24 hours.</p>
+</header>
+
+<section th:if="${active}">
+    <p th:if="${expirationLabel}">
+        <strong th:text="${expirationLabel}"></strong>
+    </p>
+    <p class="sender-boundary">
+        Files sent here are kept for 24 hours. This page cannot view,
+        download, share, or delete stored files.
+    </p>
 
     <form id="receive-upload-form"
-          th:action="@{/receive/{token}/upload(token=${receiveToken})}"
+          th:action="${uploadAction}"
           method="post"
           enctype="multipart/form-data">
         <div id="receive-drop-zone" tabindex="0">
@@ -106,11 +149,12 @@
 
     <div id="receive-upload-queue"></div>
     <p id="receive-upload-status" aria-live="polite"></p>
-</main>
+</section>
 
-<main th:unless="${active}">
+<section th:unless="${active}">
     <h2>This receive link is no longer available</h2>
     <p>It may have expired. Ask the owner to create a new receive link.</p>
+</section>
 </main>
 
 <script th:if="${active}">

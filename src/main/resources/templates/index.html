@@ -153,18 +153,27 @@
     <button type="submit">Lock owner dashboard</button>
 </form>
 <p>
-    Open the owner dashboard on another device:
+    Send files from another device:
     <a id="network-address"
-       th:href="${shareBaseUrl}"
-       th:text="${shareBaseUrl}"></a>
+       th:href="${senderUrl}"
+       th:text="${senderUrl}"></a>
 </p>
 <img id="network-qr"
-     th:src="@{/qr(text=${shareBaseUrl})}"
-     th:alt="|QR code for ${shareBaseUrl}|">
-<p><small>Scan this QR code, then enter the owner PIN.</small></p>
+     th:src="@{/qr(text=${senderUrl})}"
+     th:alt="|QR code for ${senderUrl}|">
 <p>
-    Both devices must be on the same Wi-Fi network. Give other people a
-    receive or share link instead of this owner link.
+    <small>
+        Scan this code to open a sender-only page. It cannot see or manage
+        your stored files.
+    </small>
+</p>
+<p>
+    Both devices must be on the same Wi-Fi network.
+</p>
+<p>
+    Full owner access on another device:
+    <a th:href="${shareBaseUrl}" th:text="${shareBaseUrl}"></a>
+    <small>(owner PIN required)</small>
 </p>
 
 <section id="receive-tools">

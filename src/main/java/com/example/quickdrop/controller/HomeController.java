@@ -107,9 +107,11 @@ public class HomeController {
         }
 
         FilesSnapshot snapshot = createFilesSnapshot();
+        String shareBaseUrl = createShareBaseUrl();
         model.addAttribute("files", snapshot.files());
         model.addAttribute("storageLabel", snapshot.storageLabel());
-        model.addAttribute("shareBaseUrl", createShareBaseUrl());
+        model.addAttribute("shareBaseUrl", shareBaseUrl);
+        model.addAttribute("senderUrl", shareBaseUrl + "/send");
         model.addAttribute(
                 "remoteOwnerSession",
                 ownerAccessService.isRemoteAuthenticated(request)
@@ -202,6 +204,17 @@ public class HomeController {
                 .orElse(null);
 
         model.addAttribute("receiveToken", token);
+        model.addAttribute("senderLabel", "Temporary sender link");
+        model.addAttribute("senderHeading", "Send files with this link");
+        model.addAttribute(
+                "senderDescription",
+                "This page can only send files. It cannot view, download, "
+                        + "share, or delete anything already stored."
+        );
+        model.addAttribute(
+                "uploadAction",
+                "/receive/" + token + "/upload"
+        );
 
         if (link == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -218,6 +231,28 @@ public class HomeController {
         return "receive";
     }
 
+    @GetMapping("/send")
+    public String showSenderPage(Model model) {
+        model.addAttribute("active", true);
+        model.addAttribute("senderLabel", "Device sender");
+        model.addAttribute("senderHeading", "Send files to Quick Drop");
+        model.addAttribute(
+                "senderDescription",
+                "Upload from this device without seeing or managing the "
+                        + "owner's stored files."
+        );
+        model.addAttribute("uploadAction", "/send/upload");
+        model.addAttribute("expirationLabel", null);
+        return "receive";
+    }
+
+    @PostMapping("/send/upload")
+    public synchronized ResponseEntity<ReceiveUploadResult> senderUpload(
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        return storeReceivedUpload(file);
+    }
+
     @PostMapping("/receive/{token}/upload")
     public synchronized ResponseEntity<ReceiveUploadResult> receiveUpload(
             @PathVariable String token,
@@ -231,6 +266,12 @@ public class HomeController {
                     ));
         }
 
+        return storeReceivedUpload(file);
+    }
+
+    private ResponseEntity<ReceiveUploadResult> storeReceivedUpload(
+            MultipartFile file
+    ) throws IOException {
         ResponseEntity<UploadResult> uploadResult = storeUpload(
                 file,
                 "24h",
