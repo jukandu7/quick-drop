@@ -7,6 +7,7 @@ import com.example.quickdrop.receive.ReceiveLinkService;
 import com.example.quickdrop.share.ShareLinkService;
 import com.google.zxing.WriterException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -71,6 +72,8 @@ public class HomeController {
     private final FileEventService fileEventService;
     private final NetworkAddressService networkAddressService;
     private final QrCodeService qrCodeService;
+    private final OwnerAccessService ownerAccessService;
+    private final OwnerPinService ownerPinService;
     private final int serverPort;
 
     public HomeController(
@@ -79,6 +82,8 @@ public class HomeController {
             FileEventService fileEventService,
             NetworkAddressService networkAddressService,
             QrCodeService qrCodeService,
+            OwnerAccessService ownerAccessService,
+            OwnerPinService ownerPinService,
             @Value("${server.port:8080}") int serverPort
     ) {
         this.shareLinkService = shareLinkService;
@@ -86,15 +91,33 @@ public class HomeController {
         this.fileEventService = fileEventService;
         this.networkAddressService = networkAddressService;
         this.qrCodeService = qrCodeService;
+        this.ownerAccessService = ownerAccessService;
+        this.ownerPinService = ownerPinService;
         this.serverPort = serverPort;
     }
 
     @GetMapping("/")
-    public synchronized String home(Model model) throws IOException {
+    public synchronized String home(
+            Model model,
+            HttpServletRequest request
+    ) throws IOException {
+        if (ownerAccessService.isLocalRequest(request)
+                && !ownerPinService.isConfigured()) {
+            return "redirect:/owner/setup";
+        }
+
         FilesSnapshot snapshot = createFilesSnapshot();
         model.addAttribute("files", snapshot.files());
         model.addAttribute("storageLabel", snapshot.storageLabel());
         model.addAttribute("shareBaseUrl", createShareBaseUrl());
+        model.addAttribute(
+                "remoteOwnerSession",
+                ownerAccessService.isRemoteAuthenticated(request)
+        );
+        model.addAttribute(
+                "localOwner",
+                ownerAccessService.isLocalRequest(request)
+        );
 
         return "index";
     }

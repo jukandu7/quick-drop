@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Set owner PIN — Quick Drop</title>
+    <style>
+        @font-face {
+            font-family: "Roboto";
+            font-style: normal;
+            font-weight: 100 900;
+            font-display: swap;
+            src: url("/fonts/Roboto-Variable.ttf") format("truetype");
+        }
+
+        html {
+            font-family: "Roboto", Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        body {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 3rem auto;
+            max-width: 28rem;
+            padding: 0 1rem;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        h1 {
+            font-family: inherit;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        form {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        input {
+            box-sizing: border-box;
+            padding: 0.65rem;
+            width: 100%;
+        }
+
+        button {
+            padding: 0.65rem 1rem;
+        }
+
+        .error {
+            color: #b42318;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <div th:unless="${localRequest}">
+        <h1>Finish setup on the laptop</h1>
+        <p>
+            For security, the owner PIN can only be created or changed from
+            <strong>localhost:8080</strong> on the laptop running Quick Drop.
+        </p>
+    </div>
+
+    <div th:if="${localRequest}">
+        <h1 th:text="${configured} ? 'Change owner PIN' : 'Create owner PIN'">
+            Create owner PIN
+        </h1>
+        <p>
+            Other devices will need this PIN to open the full owner
+            dashboard. Receive and share links will not require it.
+        </p>
+
+        <form action="/owner/setup" method="post">
+            <label for="pin">New owner PIN</label>
+            <input id="pin"
+                   name="pin"
+                   type="password"
+                   minlength="6"
+                   maxlength="128"
+                   autocomplete="new-password"
+                   autofocus
+                   required>
+
+            <label for="confirm-pin">Enter it again</label>
+            <input id="confirm-pin"
+                   name="confirmPin"
+                   type="password"
+                   minlength="6"
+                   maxlength="128"
+                   autocomplete="new-password"
+                   required>
+
+            <button type="submit"
+                    th:text="${configured} ? 'Change owner PIN' : 'Create owner PIN'">
+                Create owner PIN
+            </button>
+        </form>
+
+        <p class="error"
+           role="alert"
+           th:if="${error}"
+           th:text="${error}"></p>
+
+        <p th:if="${configured}"><a href="/">Back to Quick Drop</a></p>
+    </div>
+</main>
+</body>
+</html>

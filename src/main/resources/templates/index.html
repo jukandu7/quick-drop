@@ -145,9 +145,15 @@
 </head>
 <body th:attr="data-share-base-url=${shareBaseUrl}">
 <h1>Quick Drop</h1>
-<p>Send files across your local network.</p>
+<p><strong>Owner dashboard</strong> — manage Quick Drop's files and links.</p>
+<p th:if="${localOwner}"><a href="/owner/setup">Change owner PIN</a></p>
+<form th:if="${remoteOwnerSession}"
+      action="/owner/logout"
+      method="post">
+    <button type="submit">Lock owner dashboard</button>
+</form>
 <p>
-    Open on another device:
+    Open the owner dashboard on another device:
     <a id="network-address"
        th:href="${shareBaseUrl}"
        th:text="${shareBaseUrl}"></a>
@@ -155,8 +161,11 @@
 <img id="network-qr"
      th:src="@{/qr(text=${shareBaseUrl})}"
      th:alt="|QR code for ${shareBaseUrl}|">
-<p><small>Scan this QR code to open Quick Drop on another device.</small></p>
-<p>Both devices must be on the same Wi-Fi network.</p>
+<p><small>Scan this QR code, then enter the owner PIN.</small></p>
+<p>
+    Both devices must be on the same Wi-Fi network. Give other people a
+    receive or share link instead of this owner link.
+</p>
 
 <section id="receive-tools">
     <h2>Receive files from someone else</h2>

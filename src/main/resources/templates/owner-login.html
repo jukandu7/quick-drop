@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Owner access — Quick Drop</title>
+    <style>
+        @font-face {
+            font-family: "Roboto";
+            font-style: normal;
+            font-weight: 100 900;
+            font-display: swap;
+            src: url("/fonts/Roboto-Variable.ttf") format("truetype");
+        }
+
+        html {
+            font-family: "Roboto", Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        body {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 3rem auto;
+            max-width: 28rem;
+            padding: 0 1rem;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        h1 {
+            font-family: inherit;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        form {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        input {
+            box-sizing: border-box;
+            padding: 0.65rem;
+            width: 100%;
+        }
+
+        button {
+            padding: 0.65rem 1rem;
+        }
+
+        .error {
+            color: #b42318;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Quick Drop owner access</h1>
+
+    <div th:if="${setupRequired}">
+        <p>
+            The owner PIN has not been created yet. On the laptop running
+            Quick Drop, open <strong>localhost:8080</strong> to finish setup.
+        </p>
+    </div>
+
+    <div th:unless="${setupRequired}">
+        <p>
+            Enter the owner PIN to see files and use the dashboard on this
+            device.
+        </p>
+
+        <form action="/owner/login" method="post">
+            <label for="pin">Owner PIN</label>
+            <input id="pin"
+                   name="pin"
+                   type="password"
+                   autocomplete="current-password"
+                   autofocus
+                   required>
+            <button type="submit">Open owner dashboard</button>
+        </form>
+
+        <p class="error"
+           role="alert"
+           th:if="${error}"
+           th:text="${error}"></p>
+    </div>
+
+    <p>
+        If you only need to send or download files, ask the owner for a
+        receive link or a share link instead.
+    </p>
+</main>
+</body>
+</html>
