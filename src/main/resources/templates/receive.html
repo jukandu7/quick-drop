@@ -173,25 +173,33 @@
 
         uploadInProgress = true;
         browseButton.disabled = true;
-        createUploadRows(files);
+        createUploadRow(files[0]);
         let receivedCount = 0;
+        const uploadIssues = [];
+        const row = uploadQueue.querySelector(".receive-upload-item");
 
         for (let index = 0; index < files.length; index++) {
-            const row = uploadQueue.querySelector(
-                    '[data-upload-index="' + index + '"]'
-            );
+            const file = files[index];
+            prepareUploadRow(row, file);
+            uploadStatus.textContent = "Sending " + (index + 1)
+                    + " of " + files.length + ": " + file.name;
 
-            if (files[index].size > MAX_FILE_SIZE_BYTES) {
-                setRowStatus(row, "Too large — 1 GB maximum");
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                const message = "Too large — 1 GB maximum";
+                setRowStatus(row, message);
+                uploadIssues.push({filename: file.name, message});
                 continue;
             }
 
-            uploadStatus.textContent = "Sending " + (index + 1)
-                    + " of " + files.length + ": " + files[index].name;
-            const outcome = await sendUpload(files[index], row);
+            const outcome = await sendUpload(file, row);
 
             if (outcome.success) {
                 receivedCount++;
+            } else {
+                uploadIssues.push({
+                    filename: file.name,
+                    message: outcome.message ?? "Upload failed"
+                });
             }
 
             if (outcome.expired) {
@@ -199,37 +207,65 @@
             }
         }
 
-        uploadStatus.textContent = receivedCount + " of " + files.length
+        const summary = receivedCount + " of " + files.length
                 + (files.length === 1
                         ? " file received."
                         : " files received.");
+        finishUploadProgress(row, summary, uploadIssues);
+        uploadStatus.textContent = summary;
         fileInput.value = "";
         browseButton.disabled = false;
         uploadInProgress = false;
     }
 
-    function createUploadRows(files) {
+    function createUploadRow(file) {
         uploadQueue.replaceChildren();
 
-        files.forEach((file, index) => {
-            const row = document.createElement("div");
-            const name = document.createElement("strong");
-            const progress = document.createElement("progress");
-            const status = document.createElement("small");
+        const row = document.createElement("div");
+        const name = document.createElement("strong");
+        const progress = document.createElement("progress");
+        const status = document.createElement("small");
 
-            row.className = "receive-upload-item";
-            row.dataset.uploadIndex = index;
-            name.textContent = file.name;
-            progress.max = 100;
-            progress.value = 0;
-            status.className = "receive-upload-item-status";
-            status.textContent = formatFileSize(file.size) + " — Ready";
+        row.className = "receive-upload-item";
+        name.className = "receive-upload-item-name";
+        progress.max = 100;
+        progress.value = 0;
+        status.className = "receive-upload-item-status";
 
-            row.appendChild(name);
-            row.appendChild(progress);
-            row.appendChild(status);
-            uploadQueue.appendChild(row);
+        row.appendChild(name);
+        row.appendChild(progress);
+        row.appendChild(status);
+        uploadQueue.appendChild(row);
+        prepareUploadRow(row, file);
+    }
+
+    function prepareUploadRow(row, file) {
+        row.querySelector(".receive-upload-item-name")
+                .textContent = file.name;
+        row.querySelector("progress").value = 0;
+        setRowStatus(row, formatFileSize(file.size) + " — Ready");
+    }
+
+    function finishUploadProgress(row, summary, issues) {
+        row.querySelector(".receive-upload-item-name").textContent =
+                "Upload finished";
+        row.querySelector("progress").value = 100;
+        setRowStatus(row, summary);
+
+        if (issues.length === 0) {
+            return;
+        }
+
+        const issueList = document.createElement("ul");
+        issueList.className = "receive-upload-issues";
+
+        issues.forEach(issue => {
+            const item = document.createElement("li");
+            item.textContent = issue.filename + " — " + issue.message;
+            issueList.appendChild(item);
         });
+
+        uploadQueue.appendChild(issueList);
     }
 
     function sendUpload(file, row) {
@@ -268,13 +304,15 @@
                 setRowStatus(row, message);
                 resolve({
                     success: false,
-                    expired: request.status === 410
+                    expired: request.status === 410,
+                    message
                 });
             });
 
             request.addEventListener("error", () => {
-                setRowStatus(row, "Quick Drop could not be reached.");
-                resolve({success: false, expired: false});
+                const message = "Quick Drop could not be reached.";
+                setRowStatus(row, message);
+                resolve({success: false, expired: false, message});
             });
 
             request.send(formData);

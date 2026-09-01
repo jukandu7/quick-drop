@@ -514,13 +514,19 @@
         expirationSelect.disabled = true;
 
         let uploadedCount = 0;
+        const uploadIssues = [];
+        const row = getUploadRow();
 
         for (let index = 0; index < selectedFiles.length; index++) {
             const file = selectedFiles[index];
-            const row = getUploadRow(index);
+            prepareUploadRow(row, file);
+            uploadStatus.textContent = "Uploading " + (index + 1)
+                    + " of " + selectedFiles.length + ": " + file.name;
 
             if (file.size > MAX_FILE_SIZE_BYTES) {
-                setRowStatus(row, "Too large — 1 GB maximum");
+                const message = "Too large — 1 GB maximum";
+                setRowStatus(row, message);
+                uploadIssues.push({filename: file.name, message});
                 continue;
             }
 
@@ -532,27 +538,40 @@
                     + " already exists. Replace it?"
             )) {
                 setRowStatus(row, "Skipped");
+                uploadIssues.push({
+                    filename: file.name,
+                    message: "Skipped"
+                });
                 continue;
             }
 
-            uploadStatus.textContent = "Uploading " + (index + 1)
-                    + " of " + selectedFiles.length + ": " + file.name;
-
             let outcome = await sendUpload(file, overwrite, row);
 
-            if (outcome.requiresOverwrite && window.confirm(
-                    outcome.message + " Replace it?"
-            )) {
-                outcome = await sendUpload(file, true, row);
+            if (outcome.requiresOverwrite) {
+                if (window.confirm(outcome.message + " Replace it?")) {
+                    outcome = await sendUpload(file, true, row);
+                } else {
+                    setRowStatus(row, "Skipped");
+                    outcome = {success: false, message: "Skipped"};
+                }
             }
 
             if (outcome.success) {
                 uploadedCount++;
+            } else {
+                uploadIssues.push({
+                    filename: file.name,
+                    message: outcome.message ?? "Upload failed"
+                });
             }
         }
 
-        uploadStatus.textContent = uploadedCount + " of "
-                + selectedFiles.length + " files uploaded.";
+        const summary = uploadedCount + " of " + selectedFiles.length
+                + (selectedFiles.length === 1
+                        ? " file uploaded."
+                        : " files uploaded.");
+        finishUploadProgress(row, summary, uploadIssues);
+        uploadStatus.textContent = summary;
         selectedFiles = [];
         fileInput.value = "";
         browseFilesButton.disabled = false;
@@ -564,25 +583,24 @@
         selectedFiles = files;
         uploadQueue.replaceChildren();
 
-        files.forEach((file, index) => {
+        if (files.length > 0) {
             const row = document.createElement("div");
             const name = document.createElement("strong");
             const progress = document.createElement("progress");
             const status = document.createElement("small");
 
             row.className = "upload-item";
-            row.dataset.uploadIndex = index;
-            name.textContent = file.name;
+            name.className = "upload-item-name";
             progress.max = 100;
             progress.value = 0;
             status.className = "upload-item-status";
-            status.textContent = formatFileSize(file.size) + " — Ready";
 
             row.appendChild(name);
             row.appendChild(progress);
             row.appendChild(status);
             uploadQueue.appendChild(row);
-        });
+            prepareUploadRow(row, files[0]);
+        }
 
         uploadStatus.textContent = files.length === 0
                 ? "No files selected."
@@ -591,10 +609,36 @@
                         : " files selected.");
     }
 
-    function getUploadRow(index) {
-        return uploadQueue.querySelector(
-                '[data-upload-index="' + index + '"]'
-        );
+    function getUploadRow() {
+        return uploadQueue.querySelector(".upload-item");
+    }
+
+    function prepareUploadRow(row, file) {
+        row.querySelector(".upload-item-name").textContent = file.name;
+        row.querySelector("progress").value = 0;
+        setRowStatus(row, formatFileSize(file.size) + " — Ready");
+    }
+
+    function finishUploadProgress(row, summary, issues) {
+        row.querySelector(".upload-item-name").textContent =
+                "Upload finished";
+        row.querySelector("progress").value = 100;
+        setRowStatus(row, summary);
+
+        if (issues.length === 0) {
+            return;
+        }
+
+        const issueList = document.createElement("ul");
+        issueList.className = "upload-issues";
+
+        issues.forEach(issue => {
+            const item = document.createElement("li");
+            item.textContent = issue.filename + " — " + issue.message;
+            issueList.appendChild(item);
+        });
+
+        uploadQueue.appendChild(issueList);
     }
 
     function setRowStatus(row, message) {
