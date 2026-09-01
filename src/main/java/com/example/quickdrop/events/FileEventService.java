@@ -55,6 +55,10 @@ public class FileEventService {
         broadcast("file-received", filename);
     }
 
+    public void fileUploaded(String filename) {
+        broadcast("file-uploaded", filename);
+    }
+
     private void broadcastFilesChanged() {
         broadcast("files-changed", "refresh");
     }

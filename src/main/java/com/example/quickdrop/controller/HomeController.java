@@ -237,7 +237,20 @@ public class HomeController {
             @RequestParam(defaultValue = "24h") String expiration,
             @RequestParam(defaultValue = "false") boolean overwrite
     ) throws IOException {
-        return storeUpload(file, expiration, overwrite, false);
+        ResponseEntity<UploadResult> uploadResult = storeUpload(
+                file,
+                expiration,
+                overwrite,
+                false
+        );
+        UploadResult result = uploadResult.getBody();
+
+        if (uploadResult.getStatusCode().is2xxSuccessful()
+                && result != null) {
+            fileEventService.fileUploaded(result.filename());
+        }
+
+        return uploadResult;
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

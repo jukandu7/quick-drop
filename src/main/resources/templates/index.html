@@ -336,6 +336,8 @@
     let lastReceiveToken = "";
     let uploadInProgress = false;
     let notificationTimer;
+    let uploadedNotificationTimer;
+    let uploadedFileNames = [];
     let receivedNotificationTimer;
     let receivedFileNames = [];
     let fileSyncTimer;
@@ -351,6 +353,10 @@
         fileEvents.addEventListener(
                 "file-received",
                 event => queueReceivedFileNotification(event.data)
+        );
+        fileEvents.addEventListener(
+                "file-uploaded",
+                event => queueUploadedFileNotification(event.data)
         );
     }
 
@@ -633,6 +639,7 @@
                             response.shareToken,
                             response.expirationLabel
                     );
+                    queueUploadedFileNotification(response.filename);
                     resolve({success: true});
                     return;
                 }
@@ -708,32 +715,52 @@
         clearTimeout(receivedNotificationTimer);
 
         receivedNotificationTimer = setTimeout(() => {
-            const filenames = Array.from(new Set(receivedFileNames));
+            const filenames = receivedFileNames;
             receivedFileNames = [];
-
-            if (filenames.length === 1) {
-                showNotification(
-                        'Received "' + filenames[0] + '".',
-                        5000
-                );
-                return;
-            }
-
-            const displayedNames = filenames
-                    .slice(0, 3)
-                    .map(name => '"' + name + '"')
-                    .join(", ");
-            const remainingCount = filenames.length - 3;
-            const remainingText = remainingCount > 0
-                    ? ", and " + remainingCount + " more"
-                    : "";
-
-            showNotification(
-                    "Received " + filenames.length + " files: "
-                    + displayedNames + remainingText + ".",
-                    6000
-            );
+            showFileActionNotification("Received", filenames, 6000);
         }, 600);
+    }
+
+    function queueUploadedFileNotification(filename) {
+        uploadedFileNames.push(filename);
+        clearTimeout(uploadedNotificationTimer);
+
+        uploadedNotificationTimer = setTimeout(() => {
+            const filenames = uploadedFileNames;
+            uploadedFileNames = [];
+            showFileActionNotification("Uploaded", filenames, 5000);
+        }, 600);
+    }
+
+    function showFileActionNotification(action, filenames, duration) {
+        const uniqueNames = Array.from(new Set(filenames));
+
+        if (uniqueNames.length === 0) {
+            return;
+        }
+
+        if (uniqueNames.length === 1) {
+            showNotification(
+                    action + ' "' + uniqueNames[0] + '".',
+                    duration
+            );
+            return;
+        }
+
+        const displayedNames = uniqueNames
+                .slice(0, 3)
+                .map(name => '"' + name + '"')
+                .join(", ");
+        const remainingCount = uniqueNames.length - 3;
+        const remainingText = remainingCount > 0
+                ? ", and " + remainingCount + " more"
+                : "";
+
+        showNotification(
+                action + " " + uniqueNames.length + " files: "
+                + displayedNames + remainingText + ".",
+                duration
+        );
     }
 
     function getCopyChoices() {
@@ -803,6 +830,13 @@
         const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
         await copyText(shareLink);
         showShareResult(shareLink, sharedFileCount);
+        showNotification(
+                sharedFileCount === 1
+                        ? "Share link created and copied!"
+                        : "Share link for " + sharedFileCount
+                                + " files created and copied!",
+                4000
+        );
 
         uploadStatus.textContent = sharedFileCount === 1
                 ? "File link copied."
@@ -1055,6 +1089,12 @@
         }
 
         deleteSelectedButton.disabled = true;
+        const filenamesByToken = new Map(
+                getDeleteChoices().map(choice => [
+                    choice.value,
+                    choice.dataset.filename
+                ])
+        );
 
         try {
             const response = await fetch("/files", {
@@ -1069,6 +1109,10 @@
                 return;
             }
 
+            const deletedFilenames = result.deletedTokens
+                    .map(token => filenamesByToken.get(token))
+                    .filter(Boolean);
+
             result.deletedTokens.forEach(removeFileFromPage);
 
             storageStatus.textContent = result.storageLabel;
@@ -1080,6 +1124,11 @@
             lastShareUrl = "";
             updateCopyControls();
             updateDeleteControls();
+            showFileActionNotification(
+                    "Deleted",
+                    deletedFilenames,
+                    5000
+            );
         } catch (error) {
             uploadStatus.textContent =
                     "The files could not be deleted because the server "
