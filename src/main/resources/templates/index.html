@@ -328,7 +328,7 @@
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
             document.getElementById("delete-selected");
-    const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
+    const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024 * 1024;
 
     let selectedFiles = [];
     let lastShareUrl = "";
@@ -524,7 +524,7 @@
                     + " of " + selectedFiles.length + ": " + file.name;
 
             if (file.size > MAX_FILE_SIZE_BYTES) {
-                const message = "Too large — 1 GB maximum";
+                const message = "Too large — 3 GB maximum";
                 setRowStatus(row, message);
                 uploadIssues.push({filename: file.name, message});
                 continue;

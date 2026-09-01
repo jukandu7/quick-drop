@@ -51,10 +51,10 @@ import java.util.zip.ZipOutputStream;
 public class HomeController {
 
     private static final long MAX_FILE_SIZE_BYTES =
-            1024L * 1024 * 1024;
+            3L * 1024 * 1024 * 1024;
 
     private static final long MAX_TOTAL_STORAGE_BYTES =
-            2L * 1024 * 1024 * 1024;
+            5L * 1024 * 1024 * 1024;
 
     private static final DateTimeFormatter EXPIRATION_FORMATTER =
             DateTimeFormatter
@@ -262,7 +262,7 @@ public class HomeController {
     public ResponseEntity<UploadError> handleUploadTooLarge() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(new UploadError(
-                        "Upload rejected: files must be 1 GB or smaller."
+                        "Upload rejected: files must be 3 GB or smaller."
                 ));
     }
 
@@ -291,7 +291,7 @@ public class HomeController {
         if (file.getSize() > MAX_FILE_SIZE_BYTES) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                     .body(UploadResult.error(
-                            "Upload rejected: files must be 1 GB or smaller."
+                            "Upload rejected: files must be 3 GB or smaller."
                     ));
         }
 
@@ -336,7 +336,7 @@ public class HomeController {
         if (projectedStorage > MAX_TOTAL_STORAGE_BYTES) {
             return ResponseEntity.status(HttpStatus.INSUFFICIENT_STORAGE)
                     .body(UploadResult.error(
-                            "Upload rejected: Quick Drop's 2 GB storage "
+                            "Upload rejected: Quick Drop's 5 GB storage "
                                     + "limit would be exceeded."
                     ));
         }
@@ -700,7 +700,7 @@ public class HomeController {
     private String formatStorage(long bytes) {
         double megabytes = bytes / (1024.0 * 1024.0);
 
-        return String.format("%.1f MB of 2 GB used", megabytes);
+        return String.format("%.1f MB of 5 GB used", megabytes);
     }
 
     private String createShareBaseUrl() {
