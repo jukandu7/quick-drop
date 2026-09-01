@@ -250,7 +250,7 @@
         row.querySelector(".receive-upload-item-name").textContent =
                 "Upload finished";
         row.querySelector("progress").value = 100;
-        setRowStatus(row, summary);
+        setRowStatus(row, "Complete");
 
         if (issues.length === 0) {
             return;

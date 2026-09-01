@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,8 +31,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -60,6 +63,8 @@ public class HomeController {
 
     private final Path uploadDirectory =
             Path.of("uploads").toAbsolutePath().normalize();
+    private final Path uploadStagingDirectory =
+            uploadDirectory.resolve(".staging");
 
     private final ShareLinkService shareLinkService;
     private final ReceiveLinkService receiveLinkService;
@@ -85,7 +90,7 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public String home(Model model) throws IOException {
+    public synchronized String home(Model model) throws IOException {
         FilesSnapshot snapshot = createFilesSnapshot();
         model.addAttribute("files", snapshot.files());
         model.addAttribute("storageLabel", snapshot.storageLabel());
@@ -101,7 +106,7 @@ public class HomeController {
     }
 
     @GetMapping("/api/files")
-    public ResponseEntity<FilesSnapshot> filesSnapshot()
+    public synchronized ResponseEntity<FilesSnapshot> filesSnapshot()
             throws IOException {
         return ResponseEntity.ok(createFilesSnapshot());
     }
@@ -254,10 +259,19 @@ public class HomeController {
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<UploadLimitError> handleUploadTooLarge() {
+    public ResponseEntity<UploadError> handleUploadTooLarge() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(new UploadLimitError(
+                .body(new UploadError(
                         "Upload rejected: files must be 1 GB or smaller."
+                ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<UploadError> handleUploadConflict() {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new UploadError(
+                        "That filename changed during the upload. "
+                                + "Please try it again."
                 ));
     }
 
@@ -338,11 +352,7 @@ public class HomeController {
                     ));
         }
 
-        Files.copy(
-                file.getInputStream(),
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
-        );
+        replaceFileFromUpload(file, destination);
 
         ShareLinkService.LinkDetails shareLink =
                 shareLinkService.createOrUpdateLink(filename, expiresAt);
@@ -514,6 +524,45 @@ public class HomeController {
             return MediaType.parseMediaType(detectedType);
         } catch (IllegalArgumentException exception) {
             return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+    private void replaceFileFromUpload(
+            MultipartFile file,
+            Path destination
+    ) throws IOException {
+        Files.createDirectories(uploadStagingDirectory);
+        Path stagedFile = Files.createTempFile(
+                uploadStagingDirectory,
+                "upload-",
+                ".part"
+        );
+
+        try {
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(
+                        inputStream,
+                        stagedFile,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            }
+
+            try {
+                Files.move(
+                        stagedFile,
+                        destination,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            } catch (AtomicMoveNotSupportedException exception) {
+                Files.move(
+                        stagedFile,
+                        destination,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            }
+        } finally {
+            Files.deleteIfExists(stagedFile);
         }
     }
 
@@ -713,7 +762,7 @@ public class HomeController {
     public record ReceiveUploadResult(String message, String filename) {
     }
 
-    public record UploadLimitError(String message) {
+    public record UploadError(String message) {
     }
 
     public record BundleResult(
