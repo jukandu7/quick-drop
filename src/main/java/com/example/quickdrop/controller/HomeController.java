@@ -18,12 +18,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -44,6 +46,9 @@ import java.util.zip.ZipOutputStream;
 
 @Controller
 public class HomeController {
+
+    private static final long MAX_FILE_SIZE_BYTES =
+            1024L * 1024 * 1024;
 
     private static final long MAX_TOTAL_STORAGE_BYTES =
             2L * 1024 * 1024 * 1024;
@@ -235,6 +240,14 @@ public class HomeController {
         return storeUpload(file, expiration, overwrite, false);
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<UploadLimitError> handleUploadTooLarge() {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new UploadLimitError(
+                        "Upload rejected: files must be 1 GB or smaller."
+                ));
+    }
+
     private ResponseEntity<UploadResult> storeUpload(
             MultipartFile file,
             String expiration,
@@ -246,6 +259,13 @@ public class HomeController {
                 || file.getOriginalFilename().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(UploadResult.error("Please select a file."));
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                    .body(UploadResult.error(
+                            "Upload rejected: files must be 1 GB or smaller."
+                    ));
         }
 
         Files.createDirectories(uploadDirectory);
@@ -678,6 +698,9 @@ public class HomeController {
     }
 
     public record ReceiveUploadResult(String message, String filename) {
+    }
+
+    public record UploadLimitError(String message) {
     }
 
     public record BundleResult(

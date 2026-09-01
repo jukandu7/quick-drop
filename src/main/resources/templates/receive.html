@@ -120,6 +120,7 @@
     const dropZone = document.getElementById("receive-drop-zone");
     const uploadQueue = document.getElementById("receive-upload-queue");
     const uploadStatus = document.getElementById("receive-upload-status");
+    const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
     let uploadInProgress = false;
 
     browseButton.addEventListener("click", () => fileInput.click());
@@ -179,6 +180,12 @@
             const row = uploadQueue.querySelector(
                     '[data-upload-index="' + index + '"]'
             );
+
+            if (files[index].size > MAX_FILE_SIZE_BYTES) {
+                setRowStatus(row, "Too large — 1 GB maximum");
+                continue;
+            }
+
             uploadStatus.textContent = "Sending " + (index + 1)
                     + " of " + files.length + ": " + files[index].name;
             const outcome = await sendUpload(files[index], row);
@@ -288,7 +295,11 @@
             return (bytes / 1024).toFixed(1) + " KB";
         }
 
-        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        if (bytes < 1024 * 1024 * 1024) {
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
     }
 </script>
 </body>

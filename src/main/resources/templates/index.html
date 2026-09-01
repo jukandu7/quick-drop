@@ -328,6 +328,7 @@
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
             document.getElementById("delete-selected");
+    const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
 
     let selectedFiles = [];
     let lastShareUrl = "";
@@ -511,6 +512,12 @@
         for (let index = 0; index < selectedFiles.length; index++) {
             const file = selectedFiles[index];
             const row = getUploadRow(index);
+
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                setRowStatus(row, "Too large — 1 GB maximum");
+                continue;
+            }
+
             const existingFile = findFileLink(file.name);
             let overwrite = Boolean(existingFile);
 
@@ -654,7 +661,11 @@
             return (bytes / 1024).toFixed(1) + " KB";
         }
 
-        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        if (bytes < 1024 * 1024 * 1024) {
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
     }
 
     copyOptions.addEventListener("change", updateCopyControls);
