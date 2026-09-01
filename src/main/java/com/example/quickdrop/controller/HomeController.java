@@ -1,0 +1,716 @@
+package com.example.quickdrop.controller;
+
+import com.example.quickdrop.events.FileEventService;
+import com.example.quickdrop.network.NetworkAddressService;
+import com.example.quickdrop.qr.QrCodeService;
+import com.example.quickdrop.receive.ReceiveLinkService;
+import com.example.quickdrop.share.ShareLinkService;
+import com.google.zxing.WriterException;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+@Controller
+public class HomeController {
+
+    private static final long MAX_TOTAL_STORAGE_BYTES =
+            2L * 1024 * 1024 * 1024;
+
+    private static final DateTimeFormatter EXPIRATION_FORMATTER =
+            DateTimeFormatter
+                    .ofPattern("MMM d, yyyy 'at' h:mm a")
+                    .withZone(ZoneId.systemDefault());
+
+    private final Path uploadDirectory =
+            Path.of("uploads").toAbsolutePath().normalize();
+
+    private final ShareLinkService shareLinkService;
+    private final ReceiveLinkService receiveLinkService;
+    private final FileEventService fileEventService;
+    private final NetworkAddressService networkAddressService;
+    private final QrCodeService qrCodeService;
+    private final int serverPort;
+
+    public HomeController(
+            ShareLinkService shareLinkService,
+            ReceiveLinkService receiveLinkService,
+            FileEventService fileEventService,
+            NetworkAddressService networkAddressService,
+            QrCodeService qrCodeService,
+            @Value("${server.port:8080}") int serverPort
+    ) {
+        this.shareLinkService = shareLinkService;
+        this.receiveLinkService = receiveLinkService;
+        this.fileEventService = fileEventService;
+        this.networkAddressService = networkAddressService;
+        this.qrCodeService = qrCodeService;
+        this.serverPort = serverPort;
+    }
+
+    @GetMapping("/")
+    public String home(Model model) throws IOException {
+        FilesSnapshot snapshot = createFilesSnapshot();
+        model.addAttribute("files", snapshot.files());
+        model.addAttribute("storageLabel", snapshot.storageLabel());
+        model.addAttribute("shareBaseUrl", createShareBaseUrl());
+
+        return "index";
+    }
+
+    @GetMapping(value = "/events/files",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter fileEvents() {
+        return fileEventService.subscribe();
+    }
+
+    @GetMapping("/api/files")
+    public ResponseEntity<FilesSnapshot> filesSnapshot()
+            throws IOException {
+        return ResponseEntity.ok(createFilesSnapshot());
+    }
+
+    @GetMapping(value = "/qr", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> createQrCode(
+            @RequestParam String text
+    ) throws WriterException, IOException {
+        if (text.isBlank() || text.length() > 2_048) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(qrCodeService.createPng(text));
+    }
+
+    @PostMapping("/receive-links")
+    public ResponseEntity<ReceiveLinkResult> createReceiveLink(
+            @RequestBody ReceiveLinkRequest request
+    ) {
+        Duration lifetime;
+
+        try {
+            lifetime = calculateReceiveLifetime(request.expiration());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ReceiveLinkResult(
+                    "Choose a valid receive-link expiration.",
+                    null,
+                    null,
+                    null
+            ));
+        }
+
+        ReceiveLinkService.LinkDetails link =
+                receiveLinkService.create(lifetime);
+
+        return ResponseEntity.ok(new ReceiveLinkResult(
+                "Receive link created.",
+                "/receive/" + link.token(),
+                formatExpiration(link.expiresAt()),
+                link.token()
+        ));
+    }
+
+    @DeleteMapping("/receive-links/{token}")
+    public ResponseEntity<ReceiveLinkStatus> deleteReceiveLink(
+            @PathVariable String token
+    ) {
+        if (!receiveLinkService.delete(token)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ReceiveLinkStatus(
+                            "This receive link is already inactive."
+                    ));
+        }
+
+        return ResponseEntity.ok(new ReceiveLinkStatus(
+                "Receive link stopped."
+        ));
+    }
+
+    @GetMapping("/receive/{token}")
+    public String showReceivePage(
+            @PathVariable String token,
+            Model model,
+            HttpServletResponse response
+    ) {
+        ReceiveLinkService.LinkDetails link = receiveLinkService
+                .findActive(token)
+                .orElse(null);
+
+        model.addAttribute("receiveToken", token);
+
+        if (link == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            model.addAttribute("active", false);
+            return "receive";
+        }
+
+        model.addAttribute("active", true);
+        model.addAttribute(
+                "expirationLabel",
+                formatExpiration(link.expiresAt())
+        );
+
+        return "receive";
+    }
+
+    @PostMapping("/receive/{token}/upload")
+    public synchronized ResponseEntity<ReceiveUploadResult> receiveUpload(
+            @PathVariable String token,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        if (receiveLinkService.findActive(token).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.GONE)
+                    .body(new ReceiveUploadResult(
+                            "This receive link has expired or is invalid.",
+                            null
+                    ));
+        }
+
+        ResponseEntity<UploadResult> uploadResult = storeUpload(
+                file,
+                "24h",
+                false,
+                true
+        );
+        UploadResult result = uploadResult.getBody();
+
+        if (result == null) {
+            return ResponseEntity.status(uploadResult.getStatusCode())
+                    .body(new ReceiveUploadResult(
+                            "The file could not be received.",
+                            null
+                    ));
+        }
+
+        String message = uploadResult.getStatusCode().is2xxSuccessful()
+                ? result.filename() + " received successfully."
+                : result.message();
+
+        if (uploadResult.getStatusCode().is2xxSuccessful()) {
+            fileEventService.fileReceived(result.filename());
+        }
+
+        return ResponseEntity.status(uploadResult.getStatusCode())
+                .body(new ReceiveUploadResult(message, result.filename()));
+    }
+
+    @PostMapping("/upload")
+    public synchronized ResponseEntity<UploadResult> upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "24h") String expiration,
+            @RequestParam(defaultValue = "false") boolean overwrite
+    ) throws IOException {
+        return storeUpload(file, expiration, overwrite, false);
+    }
+
+    private ResponseEntity<UploadResult> storeUpload(
+            MultipartFile file,
+            String expiration,
+            boolean overwrite,
+            boolean renameDuplicate
+    ) throws IOException {
+        if (file.isEmpty()
+                || file.getOriginalFilename() == null
+                || file.getOriginalFilename().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(UploadResult.error("Please select a file."));
+        }
+
+        Files.createDirectories(uploadDirectory);
+        shareLinkService.deleteExpiredFiles();
+
+        String filename;
+
+        try {
+            filename = Path.of(file.getOriginalFilename())
+                    .getFileName()
+                    .toString();
+        } catch (RuntimeException exception) {
+            return ResponseEntity.badRequest()
+                    .body(UploadResult.error("Invalid filename."));
+        }
+
+        Path destination = uploadDirectory.resolve(filename).normalize();
+
+        if (!destination.startsWith(uploadDirectory)) {
+            return ResponseEntity.badRequest()
+                    .body(UploadResult.error("Invalid filename."));
+        }
+
+        if (renameDuplicate && Files.exists(destination)) {
+            filename = findAvailableFilename(filename);
+            destination = uploadDirectory.resolve(filename).normalize();
+        }
+
+        if (Files.isRegularFile(destination) && !overwrite) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(UploadResult.duplicate(filename));
+        }
+
+        long existingSize = Files.isRegularFile(destination)
+                ? Files.size(destination)
+                : 0;
+        long projectedStorage = calculateUsedStorage()
+                - existingSize
+                + file.getSize();
+
+        if (projectedStorage > MAX_TOTAL_STORAGE_BYTES) {
+            return ResponseEntity.status(HttpStatus.INSUFFICIENT_STORAGE)
+                    .body(UploadResult.error(
+                            "Upload rejected: Quick Drop's 2 GB storage "
+                                    + "limit would be exceeded."
+                    ));
+        }
+
+        Instant expiresAt;
+
+        try {
+            expiresAt = calculateExpiration(expiration);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest()
+                    .body(UploadResult.error(
+                            "Choose a valid expiration time."
+                    ));
+        }
+
+        Files.copy(
+                file.getInputStream(),
+                destination,
+                StandardCopyOption.REPLACE_EXISTING
+        );
+
+        ShareLinkService.LinkDetails shareLink =
+                shareLinkService.createOrUpdateLink(filename, expiresAt);
+        String expirationLabel = formatExpiration(expiresAt);
+
+        return ResponseEntity.ok(
+                new UploadResult(
+                        filename + " uploaded successfully!",
+                        filename,
+                        "/share/" + shareLink.token(),
+                        shareLink.token(),
+                        expirationLabel,
+                        formatStorage(projectedStorage),
+                        false
+                )
+        );
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<Resource> download(
+            @RequestParam("filename") String filename
+    ) throws IOException {
+
+        return createDownloadResponse(filename);
+    }
+
+    @GetMapping("/share/{token}")
+    public ResponseEntity<Resource> downloadSharedFile(
+            @PathVariable String token
+    ) throws IOException {
+
+        String filename = shareLinkService.findFilename(token)
+                .orElse(null);
+
+        if (filename == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return createDownloadResponse(filename);
+    }
+
+    @PostMapping("/share/bundles")
+    public ResponseEntity<BundleResult> createShareBundle(
+            @RequestBody ShareRequest request
+    ) {
+        if (request.tokens() == null || request.tokens().size() < 2) {
+            return ResponseEntity.badRequest().body(new BundleResult(
+                    "Select at least two files for a combined link.",
+                    null,
+                    0
+            ));
+        }
+
+        return shareLinkService.createBundle(request.tokens())
+                .map(bundle -> ResponseEntity.ok(new BundleResult(
+                        "Combined link created.",
+                        "/share/bundle/" + bundle.token(),
+                        bundle.fileCount()
+                )))
+                .orElseGet(() -> ResponseEntity.badRequest().body(
+                        new BundleResult(
+                                "At least two selected files must still "
+                                        + "be available.",
+                                null,
+                                0
+                        )
+                ));
+    }
+
+    @GetMapping("/share/bundle/{token}")
+    public ResponseEntity<StreamingResponseBody> downloadShareBundle(
+            @PathVariable String token
+    ) {
+        List<String> filenames = shareLinkService
+                .findBundleFilenames(token);
+
+        if (filenames.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        StreamingResponseBody zipBody = outputStream ->
+                writeZip(outputStream, filenames);
+
+        String disposition = ContentDisposition
+                .attachment()
+                .filename("quick-drop-files.zip")
+                .build()
+                .toString();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .header(HttpHeaders.CONTENT_TYPE, "application/zip")
+                .body(zipBody);
+    }
+
+    @DeleteMapping("/files")
+    public ResponseEntity<DeleteResult> deleteFiles(
+            @RequestBody DeleteRequest request
+    ) throws IOException {
+
+        if (request.tokens() == null || request.tokens().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new DeleteResult(
+                            "Select at least one file.",
+                            formatStorage(calculateUsedStorage()),
+                            List.of()
+                    ));
+        }
+
+        List<String> deletedTokens = shareLinkService
+                .deleteByTokens(request.tokens());
+        int deletedCount = deletedTokens.size();
+        String noun = deletedCount == 1 ? "file" : "files";
+
+        return ResponseEntity.ok(new DeleteResult(
+                deletedCount + " " + noun + " deleted.",
+                formatStorage(calculateUsedStorage()),
+                deletedTokens
+        ));
+    }
+
+    private ResponseEntity<Resource> createDownloadResponse(
+            String filename
+    ) throws IOException {
+
+        String safeFilename;
+
+        try {
+            safeFilename = Path.of(filename)
+                    .getFileName()
+                    .toString();
+        } catch (RuntimeException exception) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Path filePath = uploadDirectory
+                .resolve(safeFilename)
+                .normalize();
+
+        if (!filePath.startsWith(uploadDirectory)
+                || !Files.isRegularFile(filePath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new UrlResource(filePath.toUri());
+        MediaType mediaType = detectMediaType(filePath);
+
+        String disposition = ContentDisposition
+                .attachment()
+                .filename(safeFilename, StandardCharsets.UTF_8)
+                .build()
+                .toString();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .contentType(mediaType)
+                .contentLength(Files.size(filePath))
+                .body(resource);
+    }
+
+    private MediaType detectMediaType(Path filePath) throws IOException {
+        String detectedType = Files.probeContentType(filePath);
+
+        if (detectedType == null) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+
+        try {
+            return MediaType.parseMediaType(detectedType);
+        } catch (IllegalArgumentException exception) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+    private void writeZip(
+            OutputStream outputStream,
+            List<String> filenames
+    ) throws IOException {
+        try (ZipOutputStream zipOutputStream =
+                     new ZipOutputStream(outputStream)) {
+            for (String filename : filenames) {
+                Path filePath = uploadDirectory
+                        .resolve(filename)
+                        .normalize();
+
+                if (!filePath.startsWith(uploadDirectory)
+                        || !Files.isRegularFile(filePath)) {
+                    continue;
+                }
+
+                zipOutputStream.putNextEntry(new ZipEntry(filename));
+                Files.copy(filePath, zipOutputStream);
+                zipOutputStream.closeEntry();
+            }
+        }
+    }
+
+    private FileView createFileView(String filename) {
+        ShareLinkService.LinkDetails shareLink =
+                shareLinkService.getOrCreateLink(filename);
+
+        return new FileView(
+                filename,
+                shareLink.token(),
+                formatExpiration(shareLink.expiresAt())
+        );
+    }
+
+    private FilesSnapshot createFilesSnapshot() throws IOException {
+        Files.createDirectories(uploadDirectory);
+        shareLinkService.deleteExpiredFiles();
+
+        List<FileView> files;
+
+        try (Stream<Path> paths = Files.list(uploadDirectory)) {
+            files = paths
+                    .filter(Files::isRegularFile)
+                    .map(path -> path.getFileName().toString())
+                    .sorted()
+                    .map(this::createFileView)
+                    .toList();
+        }
+
+        return new FilesSnapshot(
+                files,
+                formatStorage(calculateUsedStorage())
+        );
+    }
+
+    private Instant calculateExpiration(String expiration) {
+        return switch (expiration) {
+            case "1h" -> Instant.now().plus(Duration.ofHours(1));
+            case "24h" -> Instant.now().plus(Duration.ofHours(24));
+            case "7d" -> Instant.now().plus(Duration.ofDays(7));
+            case "never" -> null;
+            default -> throw new IllegalArgumentException(
+                    "Unknown expiration value"
+            );
+        };
+    }
+
+    private Duration calculateReceiveLifetime(String expiration) {
+        return switch (expiration) {
+            case "15m" -> Duration.ofMinutes(15);
+            case "1h" -> Duration.ofHours(1);
+            case "24h" -> Duration.ofHours(24);
+            default -> throw new IllegalArgumentException(
+                    "Unknown receive-link expiration value"
+            );
+        };
+    }
+
+    private String findAvailableFilename(String filename) {
+        int extensionStart = filename.lastIndexOf('.');
+        boolean hasExtension = extensionStart > 0
+                && extensionStart < filename.length() - 1;
+        String baseName = hasExtension
+                ? filename.substring(0, extensionStart)
+                : filename;
+        String extension = hasExtension
+                ? filename.substring(extensionStart)
+                : "";
+
+        for (int copyNumber = 1; ; copyNumber++) {
+            String candidate = baseName
+                    + " ("
+                    + copyNumber
+                    + ")"
+                    + extension;
+            Path candidatePath = uploadDirectory
+                    .resolve(candidate)
+                    .normalize();
+
+            if (candidatePath.startsWith(uploadDirectory)
+                    && !Files.exists(candidatePath)) {
+                return candidate;
+            }
+        }
+    }
+
+    private String formatExpiration(Instant expiresAt) {
+        if (expiresAt == null) {
+            return "Never expires";
+        }
+
+        return "Expires " + EXPIRATION_FORMATTER.format(expiresAt);
+    }
+
+    private long calculateUsedStorage() throws IOException {
+        try (Stream<Path> paths = Files.list(uploadDirectory)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .mapToLong(path -> {
+                        try {
+                            return Files.size(path);
+                        } catch (IOException exception) {
+                            throw new StorageReadException(exception);
+                        }
+                    })
+                    .sum();
+        } catch (StorageReadException exception) {
+            throw (IOException) exception.getCause();
+        }
+    }
+
+    private String formatStorage(long bytes) {
+        double megabytes = bytes / (1024.0 * 1024.0);
+
+        return String.format("%.1f MB of 2 GB used", megabytes);
+    }
+
+    private String createShareBaseUrl() {
+        return "http://"
+                + networkAddressService.findLocalIpv4Address()
+                + ":"
+                + serverPort;
+    }
+
+    public record UploadResult(
+            String message,
+            String filename,
+            String sharePath,
+            String shareToken,
+            String expirationLabel,
+            String storageLabel,
+            boolean requiresOverwrite
+    ) {
+
+        public static UploadResult error(String message) {
+            return new UploadResult(
+                    message, null, null, null, null, null, false
+            );
+        }
+
+        public static UploadResult duplicate(String filename) {
+            return new UploadResult(
+                    "A file named " + filename + " already exists.",
+                    filename,
+                    null,
+                    null,
+                    null,
+                    null,
+                    true
+            );
+        }
+    }
+
+    public record DeleteRequest(List<String> tokens) {
+    }
+
+    public record ShareRequest(List<String> tokens) {
+    }
+
+    public record ReceiveLinkRequest(String expiration) {
+    }
+
+    public record ReceiveLinkResult(
+            String message,
+            String receivePath,
+            String expirationLabel,
+            String token
+    ) {
+    }
+
+    public record ReceiveLinkStatus(String message) {
+    }
+
+    public record ReceiveUploadResult(String message, String filename) {
+    }
+
+    public record BundleResult(
+            String message,
+            String sharePath,
+            int fileCount
+    ) {
+    }
+
+    public record DeleteResult(
+            String message,
+            String storageLabel,
+            List<String> deletedTokens
+    ) {
+    }
+
+    public record FileView(
+            String filename,
+            String shareToken,
+            String expirationLabel
+    ) {
+    }
+
+    public record FilesSnapshot(
+            List<FileView> files,
+            String storageLabel
+    ) {
+    }
+
+    private static class StorageReadException extends RuntimeException {
+
+        private StorageReadException(IOException cause) {
+            super(cause);
+        }
+    }
+}

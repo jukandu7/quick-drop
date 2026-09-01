@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Drop</title>
+    <style>
+        @font-face {
+            font-family: "Roboto";
+            font-style: normal;
+            font-weight: 100 900;
+            font-display: swap;
+            src: url("/fonts/Roboto-Variable.ttf") format("truetype");
+        }
+
+        html {
+            font-family: "Roboto", Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        body {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        small {
+            font-size: 1rem;
+        }
+
+        h1,
+        h2 {
+            font-family: inherit;
+            line-height: 1.2;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+        }
+
+        #drop-zone {
+            border: 2px dashed #777;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            max-width: 36rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        #drop-zone.drag-over {
+            background: #e8f1ff;
+            border-color: #2869d8;
+        }
+
+        .upload-item {
+            display: grid;
+            gap: 0.35rem;
+            margin: 0.75rem 0;
+            max-width: 36rem;
+        }
+
+        .upload-item progress {
+            width: 100%;
+        }
+
+        #copy-menu,
+        #delete-menu {
+            margin: 1rem 0;
+        }
+
+        #copy-options,
+        #delete-options {
+            margin: 0.75rem 0;
+        }
+
+        .copy-option,
+        .delete-option {
+            display: block;
+            margin: 0.35rem 0;
+        }
+
+        #share-result,
+        #receive-result {
+            border: 1px solid #aaa;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            max-width: 24rem;
+            padding: 1rem;
+        }
+
+        #share-qr,
+        #receive-qr {
+            display: block;
+            height: 20rem;
+            max-width: 100%;
+            width: 20rem;
+        }
+
+        #share-url,
+        #receive-url {
+            overflow-wrap: anywhere;
+        }
+
+        #receive-tools {
+            margin: 1.5rem 0;
+        }
+
+        #network-qr {
+            display: block;
+            height: 12rem;
+            max-width: 100%;
+            width: 12rem;
+        }
+
+        #copy-notification {
+            background: #1f7a3f;
+            border-radius: 0.5rem;
+            bottom: 1.5rem;
+            color: white;
+            left: 50%;
+            max-width: calc(100vw - 2rem);
+            opacity: 0;
+            padding: 0.75rem 1rem;
+            pointer-events: none;
+            position: fixed;
+            text-align: center;
+            transform: translate(-50%, 1rem);
+            transition: opacity 150ms ease, transform 150ms ease;
+        }
+
+        #copy-notification.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    </style>
+</head>
+<body th:attr="data-share-base-url=${shareBaseUrl}">
+<h1>Quick Drop</h1>
+<p>Send files across your local network.</p>
+<p>
+    Open on another device:
+    <a id="network-address"
+       th:href="${shareBaseUrl}"
+       th:text="${shareBaseUrl}"></a>
+</p>
+<img id="network-qr"
+     th:src="@{/qr(text=${shareBaseUrl})}"
+     th:alt="|QR code for ${shareBaseUrl}|">
+<p><small>Scan this QR code to open Quick Drop on another device.</small></p>
+<p>Both devices must be on the same Wi-Fi network.</p>
+
+<section id="receive-tools">
+    <h2>Receive files from someone else</h2>
+    <p>
+        Create an upload-only link. The sender cannot see or delete your
+        existing files.
+    </p>
+    <label for="receive-expiration">Link expires after</label>
+    <select id="receive-expiration">
+        <option value="15m">15 minutes</option>
+        <option value="1h" selected>1 hour</option>
+        <option value="24h">24 hours</option>
+    </select>
+    <button id="create-receive-link" type="button">
+        Create receive link
+    </button>
+    <p id="receive-status" aria-live="polite"></p>
+</section>
+
+<section id="receive-result" hidden>
+    <h2>Ready to receive</h2>
+    <img id="receive-qr" alt="QR code for the receive link">
+    <p>Have the sender scan this code while on the same Wi-Fi.</p>
+    <p id="receive-expiration-label"></p>
+    <p><a id="receive-url" target="_blank" rel="noopener"></a></p>
+    <button id="copy-receive-link" type="button">
+        Copy receive link
+    </button>
+    <button id="stop-receiving" type="button">
+        Stop receiving
+    </button>
+</section>
+
+<form id="upload-form"
+      action="/upload"
+      method="post"
+      enctype="multipart/form-data">
+
+    <div id="drop-zone" tabindex="0">
+        <strong>Drop one or more files here</strong>
+        <p>or</p>
+        <button id="browse-files" type="button">Choose files</button>
+        <input id="file" type="file" name="file" multiple hidden>
+    </div>
+
+    <label for="expiration">Delete after</label>
+    <select id="expiration" name="expiration">
+        <option value="1h">1 hour</option>
+        <option value="24h" selected>24 hours</option>
+        <option value="7d">7 days</option>
+        <option value="never">Never</option>
+    </select>
+    <small>Files upload automatically after you choose or drop them.</small>
+</form>
+
+<div id="upload-queue"></div>
+<p id="upload-status" aria-live="polite"></p>
+
+<section id="share-result" hidden>
+    <h2>Ready to share</h2>
+    <img id="share-qr" alt="QR code for the share link">
+    <p>Scan this QR code with a phone on the same Wi-Fi.</p>
+    <p><a id="share-url" target="_blank" rel="noopener"></a></p>
+    <button id="copy-again" type="button">Copy share link</button>
+</section>
+
+<div id="copy-notification"
+     role="status"
+     aria-live="polite"
+     aria-atomic="true"></div>
+
+<h2>Available files</h2>
+<p id="storage-status" th:text="${storageLabel}"></p>
+
+<details id="copy-menu" th:hidden="${#lists.isEmpty(files)}">
+    <summary>Share files</summary>
+
+    <div id="copy-options">
+        <label class="copy-option" th:each="file : ${files}">
+            <input type="checkbox"
+                   class="copy-choice"
+                   th:value="@{/share/{token}(token=${file.shareToken})}"
+                   th:attr="data-share-token=${file.shareToken},data-filename=${file.filename}">
+            <span th:text="${file.filename}"></span>
+        </label>
+    </div>
+
+    <button id="copy-select-all" type="button">Select all</button>
+    <button id="copy-selected" type="button" disabled>
+        Create share link
+    </button>
+</details>
+
+<details id="delete-menu" th:hidden="${#lists.isEmpty(files)}">
+    <summary>Delete files</summary>
+
+    <div id="delete-options">
+        <label class="delete-option" th:each="file : ${files}">
+            <input type="checkbox"
+                   class="delete-choice"
+                   th:value="${file.shareToken}"
+                   th:attr="data-filename=${file.filename}">
+            <span th:text="${file.filename}"></span>
+        </label>
+    </div>
+
+    <button id="select-all" type="button">Select all</button>
+    <button id="delete-selected" type="button" disabled>
+        Delete selected
+    </button>
+</details>
+
+<p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
+    No files uploaded yet.
+</p>
+
+<ul id="files-list">
+    <li th:each="file : ${files}"
+        th:attr="data-share-token=${file.shareToken}">
+        <a th:href="@{/download(filename=${file.filename})}"
+           th:attr="data-filename=${file.filename}"
+           th:text="${file.filename}">
+        </a>
+        <small class="expiration" th:text="${file.expirationLabel}"></small>
+    </li>
+</ul>
+
+<script>
+    const uploadForm = document.getElementById("upload-form");
+    const fileInput = document.getElementById("file");
+    const browseFilesButton = document.getElementById("browse-files");
+    const dropZone = document.getElementById("drop-zone");
+    const uploadQueue = document.getElementById("upload-queue");
+    const uploadStatus = document.getElementById("upload-status");
+    const expirationSelect = document.getElementById("expiration");
+    const filesList = document.getElementById("files-list");
+    const emptyMessage = document.getElementById("empty-message");
+    const storageStatus = document.getElementById("storage-status");
+    const shareBaseUrl = document.body.dataset.shareBaseUrl
+            || window.location.origin;
+    const shareResult = document.getElementById("share-result");
+    const shareQr = document.getElementById("share-qr");
+    const shareUrl = document.getElementById("share-url");
+    const copyAgainButton = document.getElementById("copy-again");
+    const receiveExpiration =
+            document.getElementById("receive-expiration");
+    const createReceiveButton =
+            document.getElementById("create-receive-link");
+    const receiveStatus = document.getElementById("receive-status");
+    const receiveResult = document.getElementById("receive-result");
+    const receiveQr = document.getElementById("receive-qr");
+    const receiveUrl = document.getElementById("receive-url");
+    const receiveExpirationLabel =
+            document.getElementById("receive-expiration-label");
+    const copyReceiveButton =
+            document.getElementById("copy-receive-link");
+    const stopReceivingButton =
+            document.getElementById("stop-receiving");
+    const copyNotification =
+            document.getElementById("copy-notification");
+    const copyMenu = document.getElementById("copy-menu");
+    const copyOptions = document.getElementById("copy-options");
+    const copySelectAllButton =
+            document.getElementById("copy-select-all");
+    const copySelectedButton =
+            document.getElementById("copy-selected");
+    const deleteMenu = document.getElementById("delete-menu");
+    const deleteOptions = document.getElementById("delete-options");
+    const selectAllButton = document.getElementById("select-all");
+    const deleteSelectedButton =
+            document.getElementById("delete-selected");
+
+    let selectedFiles = [];
+    let lastShareUrl = "";
+    let lastReceiveUrl = "";
+    let lastReceiveToken = "";
+    let uploadInProgress = false;
+    let notificationTimer;
+    let receivedNotificationTimer;
+    let receivedFileNames = [];
+    let fileSyncTimer;
+    let fileSyncInProgress = false;
+    let fileEvents;
+
+    if ("EventSource" in window) {
+        fileEvents = new EventSource("/events/files");
+        fileEvents.addEventListener(
+                "files-changed",
+                scheduleAvailableFilesSync
+        );
+        fileEvents.addEventListener(
+                "file-received",
+                event => queueReceivedFileNotification(event.data)
+        );
+    }
+
+    window.setInterval(scheduleAvailableFilesSync, 30000);
+
+    browseFilesButton.addEventListener("click", () => fileInput.click());
+
+    createReceiveButton.addEventListener("click", createReceiveLink);
+
+    copyReceiveButton.addEventListener("click", async () => {
+        if (lastReceiveUrl) {
+            await copyText(lastReceiveUrl);
+            receiveStatus.textContent = "Receive link copied.";
+            showNotification("Receive link copied!");
+        }
+    });
+
+    stopReceivingButton.addEventListener("click", async () => {
+        if (!lastReceiveToken || !window.confirm(
+                "Stop accepting uploads through this receive link?"
+        )) {
+            return;
+        }
+
+        stopReceivingButton.disabled = true;
+
+        try {
+            const response = await fetch(
+                    "/receive-links/" + encodeURIComponent(lastReceiveToken),
+                    {method: "DELETE"}
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                receiveStatus.textContent = result.message;
+                return;
+            }
+
+            receiveResult.hidden = true;
+            lastReceiveUrl = "";
+            lastReceiveToken = "";
+            receiveStatus.textContent = result.message;
+        } catch (error) {
+            receiveStatus.textContent =
+                    "The receive link could not be stopped because the "
+                    + "server could not be reached.";
+        } finally {
+            stopReceivingButton.disabled = false;
+        }
+    });
+
+    async function createReceiveLink() {
+        createReceiveButton.disabled = true;
+        receiveStatus.textContent = "Creating receive link...";
+
+        try {
+            const response = await fetch("/receive-links", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    expiration: receiveExpiration.value
+                })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                receiveStatus.textContent = result.message;
+                return;
+            }
+
+            lastReceiveUrl = new URL(
+                    result.receivePath,
+                    shareBaseUrl + "/"
+            ).href;
+            lastReceiveToken = result.token;
+            receiveUrl.href = lastReceiveUrl;
+            receiveUrl.textContent = lastReceiveUrl;
+            receiveQr.src = "/qr?text="
+                    + encodeURIComponent(lastReceiveUrl);
+            receiveExpirationLabel.textContent = result.expirationLabel;
+            receiveResult.hidden = false;
+            await copyText(lastReceiveUrl);
+            receiveStatus.textContent = "Receive link created and copied.";
+            showNotification("Receive link copied!");
+            receiveResult.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+            });
+        } catch (error) {
+            receiveStatus.textContent =
+                    "The receive link could not be created because the "
+                    + "server could not be reached.";
+        } finally {
+            createReceiveButton.disabled = false;
+        }
+    }
+
+    fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files);
+
+        if (files.length > 0) {
+            startUploads(files);
+        }
+    });
+
+    ["dragenter", "dragover"].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropZone.classList.add("drag-over");
+        });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropZone.classList.remove("drag-over");
+        });
+    });
+
+    dropZone.addEventListener("drop", event => {
+        if (uploadInProgress) {
+            uploadStatus.textContent =
+                    "Wait for the current uploads to finish.";
+            return;
+        }
+
+        const files = Array.from(event.dataTransfer.files);
+
+        if (files.length > 0) {
+            startUploads(files);
+        }
+    });
+
+    dropZone.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            fileInput.click();
+        }
+    });
+
+    uploadForm.addEventListener("submit", event => {
+        event.preventDefault();
+    });
+
+    async function startUploads(files) {
+        if (uploadInProgress) {
+            uploadStatus.textContent =
+                    "Wait for the current uploads to finish.";
+            return;
+        }
+
+        setSelectedFiles(files);
+        uploadInProgress = true;
+        browseFilesButton.disabled = true;
+        expirationSelect.disabled = true;
+
+        let uploadedCount = 0;
+
+        for (let index = 0; index < selectedFiles.length; index++) {
+            const file = selectedFiles[index];
+            const row = getUploadRow(index);
+            const existingFile = findFileLink(file.name);
+            let overwrite = Boolean(existingFile);
+
+            if (existingFile && !window.confirm(
+                    "A file named " + file.name
+                    + " already exists. Replace it?"
+            )) {
+                setRowStatus(row, "Skipped");
+                continue;
+            }
+
+            uploadStatus.textContent = "Uploading " + (index + 1)
+                    + " of " + selectedFiles.length + ": " + file.name;
+
+            let outcome = await sendUpload(file, overwrite, row);
+
+            if (outcome.requiresOverwrite && window.confirm(
+                    outcome.message + " Replace it?"
+            )) {
+                outcome = await sendUpload(file, true, row);
+            }
+
+            if (outcome.success) {
+                uploadedCount++;
+            }
+        }
+
+        uploadStatus.textContent = uploadedCount + " of "
+                + selectedFiles.length + " files uploaded.";
+        selectedFiles = [];
+        fileInput.value = "";
+        browseFilesButton.disabled = false;
+        expirationSelect.disabled = false;
+        uploadInProgress = false;
+    }
+
+    function setSelectedFiles(files) {
+        selectedFiles = files;
+        uploadQueue.replaceChildren();
+
+        files.forEach((file, index) => {
+            const row = document.createElement("div");
+            const name = document.createElement("strong");
+            const progress = document.createElement("progress");
+            const status = document.createElement("small");
+
+            row.className = "upload-item";
+            row.dataset.uploadIndex = index;
+            name.textContent = file.name;
+            progress.max = 100;
+            progress.value = 0;
+            status.className = "upload-item-status";
+            status.textContent = formatFileSize(file.size) + " — Ready";
+
+            row.appendChild(name);
+            row.appendChild(progress);
+            row.appendChild(status);
+            uploadQueue.appendChild(row);
+        });
+
+        uploadStatus.textContent = files.length === 0
+                ? "No files selected."
+                : files.length + (files.length === 1
+                        ? " file selected."
+                        : " files selected.");
+    }
+
+    function getUploadRow(index) {
+        return uploadQueue.querySelector(
+                '[data-upload-index="' + index + '"]'
+        );
+    }
+
+    function setRowStatus(row, message) {
+        row.querySelector(".upload-item-status").textContent = message;
+    }
+
+    function sendUpload(file, overwrite, row) {
+        return new Promise(resolve => {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("expiration", expirationSelect.value);
+            formData.append("overwrite", overwrite);
+
+            const request = new XMLHttpRequest();
+            request.open("POST", uploadForm.action);
+            request.responseType = "json";
+            setRowStatus(row, "Uploading — 0%");
+
+            request.upload.addEventListener("progress", progressEvent => {
+                if (!progressEvent.lengthComputable) {
+                    return;
+                }
+
+                const percentage = Math.round(
+                        progressEvent.loaded / progressEvent.total * 100
+                );
+
+                row.querySelector("progress").value = percentage;
+                setRowStatus(row, "Uploading — " + percentage + "%");
+            });
+
+            request.addEventListener("load", () => {
+                const response = request.response;
+
+                if (request.status >= 200 && request.status < 300) {
+                    row.querySelector("progress").value = 100;
+                    setRowStatus(row, "Uploaded");
+                    storageStatus.textContent = response.storageLabel;
+                    addFileToList(
+                            response.filename,
+                            response.sharePath,
+                            response.shareToken,
+                            response.expirationLabel
+                    );
+                    resolve({success: true});
+                    return;
+                }
+
+                const message = response?.message ?? "Upload failed.";
+                setRowStatus(row, message);
+                resolve({
+                    success: false,
+                    requiresOverwrite: response?.requiresOverwrite,
+                    message
+                });
+            });
+
+            request.addEventListener("error", () => {
+                const message = "Server could not be reached.";
+                setRowStatus(row, message);
+                resolve({success: false, message});
+            });
+
+            request.send(formData);
+        });
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024 * 1024) {
+            return (bytes / 1024).toFixed(1) + " KB";
+        }
+
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    copyOptions.addEventListener("change", updateCopyControls);
+
+    copySelectAllButton.addEventListener("click", () => {
+        const choices = getCopyChoices();
+        const allSelected = choices.every(choice => choice.checked);
+
+        choices.forEach(choice => choice.checked = !allSelected);
+        updateCopyControls();
+    });
+
+    copySelectedButton.addEventListener("click", () => {
+        copyLinks(getCopyChoices().filter(choice => choice.checked));
+    });
+
+    copyAgainButton.addEventListener("click", async () => {
+        if (lastShareUrl) {
+            await copyText(lastShareUrl);
+            uploadStatus.textContent = "Share link copied.";
+            showNotification();
+        }
+    });
+
+    function showNotification(
+            message = "Share link copied!",
+            duration = 2000
+    ) {
+        clearTimeout(notificationTimer);
+        copyNotification.textContent = message;
+        copyNotification.classList.add("show");
+
+        notificationTimer = setTimeout(() => {
+            copyNotification.classList.remove("show");
+        }, duration);
+    }
+
+    function queueReceivedFileNotification(filename) {
+        receivedFileNames.push(filename);
+        clearTimeout(receivedNotificationTimer);
+
+        receivedNotificationTimer = setTimeout(() => {
+            const filenames = Array.from(new Set(receivedFileNames));
+            receivedFileNames = [];
+
+            if (filenames.length === 1) {
+                showNotification(
+                        'Received "' + filenames[0] + '".',
+                        5000
+                );
+                return;
+            }
+
+            const displayedNames = filenames
+                    .slice(0, 3)
+                    .map(name => '"' + name + '"')
+                    .join(", ");
+            const remainingCount = filenames.length - 3;
+            const remainingText = remainingCount > 0
+                    ? ", and " + remainingCount + " more"
+                    : "";
+
+            showNotification(
+                    "Received " + filenames.length + " files: "
+                    + displayedNames + remainingText + ".",
+                    6000
+            );
+        }, 600);
+    }
+
+    function getCopyChoices() {
+        return Array.from(
+                copyOptions.querySelectorAll(".copy-choice")
+        );
+    }
+
+    function updateCopyControls() {
+        const choices = getCopyChoices();
+        const selectedCount = choices
+                .filter(choice => choice.checked).length;
+
+        copySelectedButton.disabled = selectedCount === 0;
+        copySelectedButton.textContent = selectedCount === 0
+                ? "Create share link"
+                : "Create share link (" + selectedCount + ")";
+        copySelectAllButton.textContent = choices.length > 0
+                && choices.every(choice => choice.checked)
+                ? "Clear selection"
+                : "Select all";
+    }
+
+    async function copyLinks(choices) {
+        if (choices.length === 0) {
+            return;
+        }
+
+        let sharePath = choices[0].value;
+        let sharedFileCount = 1;
+        const creationEndpoint = choices.length > 1
+                ? "/share/bundles"
+                : null;
+
+        if (creationEndpoint) {
+            copySelectedButton.disabled = true;
+
+            try {
+                const response = await fetch(creationEndpoint, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        tokens: choices.map(choice =>
+                                choice.dataset.shareToken
+                        )
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    uploadStatus.textContent = result.message;
+                    return;
+                }
+
+                sharePath = result.sharePath;
+                sharedFileCount = result.fileCount;
+            } catch (error) {
+                uploadStatus.textContent =
+                        "The combined link could not be created because "
+                        + "the server could not be reached.";
+                return;
+            } finally {
+                updateCopyControls();
+            }
+        }
+
+        const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
+        await copyText(shareLink);
+        showShareResult(shareLink, sharedFileCount);
+
+        uploadStatus.textContent = sharedFileCount === 1
+                ? "File link copied."
+                : "One link for " + sharedFileCount + " files copied.";
+    }
+
+    async function copyText(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (error) {
+            const temporaryInput = document.createElement("textarea");
+            temporaryInput.value = text;
+            temporaryInput.style.position = "fixed";
+            temporaryInput.style.opacity = "0";
+            document.body.appendChild(temporaryInput);
+            temporaryInput.select();
+            document.execCommand("copy");
+            temporaryInput.remove();
+        }
+    }
+
+    function showShareResult(url, fileCount) {
+        lastShareUrl = url;
+        shareUrl.href = url;
+        shareUrl.textContent = url;
+        shareQr.src = "/qr?text=" + encodeURIComponent(url);
+        shareQr.alt = fileCount === 1
+                ? "QR code for one shared file"
+                : "QR code for " + fileCount + " shared files";
+        shareResult.hidden = false;
+        shareResult.scrollIntoView({behavior: "smooth", block: "nearest"});
+    }
+
+    function scheduleAvailableFilesSync() {
+        clearTimeout(fileSyncTimer);
+        fileSyncTimer = setTimeout(syncAvailableFiles, 100);
+    }
+
+    async function syncAvailableFiles() {
+        if (fileSyncInProgress) {
+            return;
+        }
+
+        fileSyncInProgress = true;
+
+        try {
+            const response = await fetch("/api/files", {cache: "no-store"});
+
+            if (!response.ok) {
+                return;
+            }
+
+            const snapshot = await response.json();
+            const activeTokens = new Set();
+
+            snapshot.files.forEach(file => {
+                activeTokens.add(file.shareToken);
+                addFileToList(
+                        file.filename,
+                        "/share/" + file.shareToken,
+                        file.shareToken,
+                        file.expirationLabel
+                );
+            });
+
+            Array.from(
+                    filesList.querySelectorAll("li[data-share-token]")
+            ).forEach(item => {
+                if (!activeTokens.has(item.dataset.shareToken)) {
+                    removeFileFromPage(item.dataset.shareToken);
+                }
+            });
+
+            storageStatus.textContent = snapshot.storageLabel;
+            emptyMessage.hidden = snapshot.files.length !== 0;
+            copyMenu.hidden = snapshot.files.length === 0;
+            deleteMenu.hidden = snapshot.files.length === 0;
+            updateCopyControls();
+            updateDeleteControls();
+        } catch (error) {
+            // EventSource reconnects automatically if the server restarts.
+        } finally {
+            fileSyncInProgress = false;
+        }
+    }
+
+    function findFileLink(filename) {
+        return Array.from(filesList.querySelectorAll("a[data-filename]"))
+                .find(link => link.dataset.filename === filename);
+    }
+
+    function addFileToList(
+            filename,
+            sharePath,
+            shareToken,
+            expirationLabel
+    ) {
+        const existingLink = findFileLink(filename);
+
+        if (existingLink) {
+            const existingItem = existingLink.closest("li");
+            const existingCopyChoice = getCopyChoices()
+                    .find(choice => choice.dataset.filename === filename);
+            const existingDeleteChoice = getDeleteChoices()
+                    .find(choice => choice.dataset.filename === filename);
+
+            existingItem.dataset.shareToken = shareToken;
+            existingLink.href = "/download?filename="
+                    + encodeURIComponent(filename);
+
+            if (existingCopyChoice) {
+                existingCopyChoice.value = sharePath;
+                existingCopyChoice.dataset.shareToken = shareToken;
+            }
+
+            if (existingDeleteChoice) {
+                existingDeleteChoice.value = shareToken;
+            }
+
+            existingItem.querySelector(".expiration")
+                    .textContent = expirationLabel;
+            return;
+        }
+
+        const listItem = document.createElement("li");
+        const link = document.createElement("a");
+        const expirationText = document.createElement("small");
+
+        listItem.dataset.shareToken = shareToken;
+        link.href = "/download?filename=" + encodeURIComponent(filename);
+        link.dataset.filename = filename;
+        link.textContent = filename;
+        expirationText.className = "expiration";
+        expirationText.textContent = expirationLabel;
+
+        listItem.appendChild(link);
+        listItem.append(" ");
+        listItem.appendChild(expirationText);
+        filesList.appendChild(listItem);
+
+        addCopyOption(filename, sharePath, shareToken);
+        addDeleteOption(filename, shareToken);
+        emptyMessage.hidden = true;
+        copyMenu.hidden = false;
+        deleteMenu.hidden = false;
+    }
+
+    function addCopyOption(filename, sharePath, shareToken) {
+        const existingChoice = getCopyChoices()
+                .find(choice => choice.dataset.shareToken === shareToken);
+
+        if (existingChoice) {
+            existingChoice.value = sharePath;
+            return;
+        }
+
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        const filenameText = document.createElement("span");
+
+        label.className = "copy-option";
+        checkbox.type = "checkbox";
+        checkbox.className = "copy-choice";
+        checkbox.value = sharePath;
+        checkbox.dataset.shareToken = shareToken;
+        checkbox.dataset.filename = filename;
+        filenameText.textContent = filename;
+
+        label.appendChild(checkbox);
+        label.append(" ");
+        label.appendChild(filenameText);
+        copyOptions.appendChild(label);
+        updateCopyControls();
+    }
+
+    deleteOptions.addEventListener("change", updateDeleteControls);
+
+    selectAllButton.addEventListener("click", () => {
+        const choices = getDeleteChoices();
+        const allSelected = choices.every(choice => choice.checked);
+
+        choices.forEach(choice => choice.checked = !allSelected);
+        updateDeleteControls();
+    });
+
+    deleteSelectedButton.addEventListener("click", () => {
+        const selectedTokens = getDeleteChoices()
+                .filter(choice => choice.checked)
+                .map(choice => choice.value);
+
+        deleteFiles(selectedTokens, "selected files");
+    });
+
+    function getDeleteChoices() {
+        return Array.from(
+                deleteOptions.querySelectorAll(".delete-choice")
+        );
+    }
+
+    function updateDeleteControls() {
+        const choices = getDeleteChoices();
+        const selectedCount = choices
+                .filter(choice => choice.checked).length;
+
+        deleteSelectedButton.disabled = selectedCount === 0;
+        deleteSelectedButton.textContent = selectedCount === 0
+                ? "Delete selected"
+                : "Delete selected (" + selectedCount + ")";
+        selectAllButton.textContent = choices.length > 0
+                && choices.every(choice => choice.checked)
+                ? "Clear selection"
+                : "Select all";
+    }
+
+    function addDeleteOption(filename, shareToken) {
+        const existingChoice = getDeleteChoices()
+                .find(choice => choice.value === shareToken);
+
+        if (existingChoice) {
+            return;
+        }
+
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        const filenameText = document.createElement("span");
+
+        label.className = "delete-option";
+        checkbox.type = "checkbox";
+        checkbox.className = "delete-choice";
+        checkbox.value = shareToken;
+        checkbox.dataset.filename = filename;
+        filenameText.textContent = filename;
+
+        label.appendChild(checkbox);
+        label.append(" ");
+        label.appendChild(filenameText);
+        deleteOptions.appendChild(label);
+        updateDeleteControls();
+    }
+
+    async function deleteFiles(tokens, description) {
+        if (tokens.length === 0) {
+            return;
+        }
+
+        if (!window.confirm(
+                "Permanently delete " + description + "?"
+        )) {
+            return;
+        }
+
+        deleteSelectedButton.disabled = true;
+
+        try {
+            const response = await fetch("/files", {
+                method: "DELETE",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({tokens})
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                uploadStatus.textContent = result.message;
+                return;
+            }
+
+            result.deletedTokens.forEach(removeFileFromPage);
+
+            storageStatus.textContent = result.storageLabel;
+            uploadStatus.textContent = result.message;
+            emptyMessage.hidden = filesList.children.length !== 0;
+            copyMenu.hidden = filesList.children.length === 0;
+            deleteMenu.hidden = filesList.children.length === 0;
+            shareResult.hidden = true;
+            lastShareUrl = "";
+            updateCopyControls();
+            updateDeleteControls();
+        } catch (error) {
+            uploadStatus.textContent =
+                    "The files could not be deleted because the server "
+                    + "could not be reached.";
+        } finally {
+            updateDeleteControls();
+        }
+    }
+
+    function removeFileFromPage(token) {
+        filesList.querySelector(
+                'li[data-share-token="' + token + '"]'
+        )?.remove();
+
+        getDeleteChoices()
+                .find(choice => choice.value === token)
+                ?.closest("label")
+                .remove();
+
+        getCopyChoices()
+                .find(choice => choice.dataset.shareToken === token)
+                ?.closest("label")
+                .remove();
+    }
+</script>
+</body>
+</html>

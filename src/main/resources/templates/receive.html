@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Send files to Quick Drop</title>
+    <style>
+        @font-face {
+            font-family: "Roboto";
+            font-style: normal;
+            font-weight: 100 900;
+            font-display: swap;
+            src: url("/fonts/Roboto-Variable.ttf") format("truetype");
+        }
+
+        html {
+            font-family: "Roboto", Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        body {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 2rem auto;
+            max-width: 40rem;
+            padding: 0 1rem;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        small {
+            font-size: 1rem;
+        }
+
+        h1,
+        h2 {
+            font-family: inherit;
+            line-height: 1.2;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+        }
+
+        #receive-drop-zone {
+            border: 2px dashed #777;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        #receive-drop-zone.drag-over {
+            background: #e8f1ff;
+            border-color: #2869d8;
+        }
+
+        .receive-upload-item {
+            display: grid;
+            gap: 0.35rem;
+            margin: 0.75rem 0;
+        }
+
+        .receive-upload-item progress {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<h1>Send files to Quick Drop</h1>
+
+<main th:if="${active}">
+    <p>
+        Choose or drop files below. You cannot see or manage the files
+        already stored on this Quick Drop.
+    </p>
+    <p><strong th:text="${expirationLabel}"></strong></p>
+    <p>Received files are kept for 24 hours.</p>
+
+    <form id="receive-upload-form"
+          th:action="@{/receive/{token}/upload(token=${receiveToken})}"
+          method="post"
+          enctype="multipart/form-data">
+        <div id="receive-drop-zone" tabindex="0">
+            <strong>Drop one or more files here</strong>
+            <p>or</p>
+            <button id="receive-browse-files" type="button">
+                Choose files
+            </button>
+            <input id="receive-file"
+                   type="file"
+                   name="file"
+                   multiple
+                   hidden>
+        </div>
+    </form>
+
+    <div id="receive-upload-queue"></div>
+    <p id="receive-upload-status" aria-live="polite"></p>
+</main>
+
+<main th:unless="${active}">
+    <h2>This receive link is no longer available</h2>
+    <p>It may have expired. Ask the owner to create a new receive link.</p>
+</main>
+
+<script th:if="${active}">
+    const uploadForm = document.getElementById("receive-upload-form");
+    const fileInput = document.getElementById("receive-file");
+    const browseButton = document.getElementById("receive-browse-files");
+    const dropZone = document.getElementById("receive-drop-zone");
+    const uploadQueue = document.getElementById("receive-upload-queue");
+    const uploadStatus = document.getElementById("receive-upload-status");
+    let uploadInProgress = false;
+
+    browseButton.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", () => {
+        const files = Array.from(fileInput.files);
+
+        if (files.length > 0) {
+            startUploads(files);
+        }
+    });
+
+    ["dragenter", "dragover"].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropZone.classList.add("drag-over");
+        });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropZone.classList.remove("drag-over");
+        });
+    });
+
+    dropZone.addEventListener("drop", event => {
+        const files = Array.from(event.dataTransfer.files);
+
+        if (files.length > 0) {
+            startUploads(files);
+        }
+    });
+
+    dropZone.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            fileInput.click();
+        }
+    });
+
+    uploadForm.addEventListener("submit", event => event.preventDefault());
+
+    async function startUploads(files) {
+        if (uploadInProgress) {
+            uploadStatus.textContent =
+                    "Wait for the current uploads to finish.";
+            return;
+        }
+
+        uploadInProgress = true;
+        browseButton.disabled = true;
+        createUploadRows(files);
+        let receivedCount = 0;
+
+        for (let index = 0; index < files.length; index++) {
+            const row = uploadQueue.querySelector(
+                    '[data-upload-index="' + index + '"]'
+            );
+            uploadStatus.textContent = "Sending " + (index + 1)
+                    + " of " + files.length + ": " + files[index].name;
+            const outcome = await sendUpload(files[index], row);
+
+            if (outcome.success) {
+                receivedCount++;
+            }
+
+            if (outcome.expired) {
+                break;
+            }
+        }
+
+        uploadStatus.textContent = receivedCount + " of " + files.length
+                + (files.length === 1
+                        ? " file received."
+                        : " files received.");
+        fileInput.value = "";
+        browseButton.disabled = false;
+        uploadInProgress = false;
+    }
+
+    function createUploadRows(files) {
+        uploadQueue.replaceChildren();
+
+        files.forEach((file, index) => {
+            const row = document.createElement("div");
+            const name = document.createElement("strong");
+            const progress = document.createElement("progress");
+            const status = document.createElement("small");
+
+            row.className = "receive-upload-item";
+            row.dataset.uploadIndex = index;
+            name.textContent = file.name;
+            progress.max = 100;
+            progress.value = 0;
+            status.className = "receive-upload-item-status";
+            status.textContent = formatFileSize(file.size) + " — Ready";
+
+            row.appendChild(name);
+            row.appendChild(progress);
+            row.appendChild(status);
+            uploadQueue.appendChild(row);
+        });
+    }
+
+    function sendUpload(file, row) {
+        return new Promise(resolve => {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const request = new XMLHttpRequest();
+            request.open("POST", uploadForm.action);
+            request.responseType = "json";
+            setRowStatus(row, "Sending — 0%");
+
+            request.upload.addEventListener("progress", progressEvent => {
+                if (!progressEvent.lengthComputable) {
+                    return;
+                }
+
+                const percentage = Math.round(
+                        progressEvent.loaded / progressEvent.total * 100
+                );
+                row.querySelector("progress").value = percentage;
+                setRowStatus(row, "Sending — " + percentage + "%");
+            });
+
+            request.addEventListener("load", () => {
+                const response = request.response;
+
+                if (request.status >= 200 && request.status < 300) {
+                    row.querySelector("progress").value = 100;
+                    setRowStatus(row, response.message);
+                    resolve({success: true, expired: false});
+                    return;
+                }
+
+                const message = response?.message ?? "Upload failed.";
+                setRowStatus(row, message);
+                resolve({
+                    success: false,
+                    expired: request.status === 410
+                });
+            });
+
+            request.addEventListener("error", () => {
+                setRowStatus(row, "Quick Drop could not be reached.");
+                resolve({success: false, expired: false});
+            });
+
+            request.send(formData);
+        });
+    }
+
+    function setRowStatus(row, message) {
+        row.querySelector(".receive-upload-item-status")
+                .textContent = message;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+
+        if (bytes < 1024 * 1024) {
+            return (bytes / 1024).toFixed(1) + " KB";
+        }
+
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+</script>
+</body>
+</html>
