@@ -79,7 +79,9 @@ public class NetworkAddressService {
 
     private boolean isUsable(InetAddress address) {
         return address instanceof Inet4Address
-                && address.isSiteLocalAddress()
-                && !address.isLoopbackAddress();
+                && !address.isAnyLocalAddress()
+                && !address.isLoopbackAddress()
+                && !address.isLinkLocalAddress()
+                && !address.isMulticastAddress();
     }
 }
