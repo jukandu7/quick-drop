@@ -10,6 +10,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OwnerAccessFilterTests {
 
@@ -21,6 +23,26 @@ class OwnerAccessFilterTests {
         OwnerAccessService accessService =
                 new OwnerAccessService(pinService);
         filter = new OwnerAccessFilter(accessService);
+    }
+
+    @Test
+    void ownerPinAcceptsExactlyFourDigits() {
+        OwnerPinService pinService = new OwnerPinService();
+
+        assertThatCode(() -> pinService.validate("4827"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void ownerPinRejectsOtherFormats() {
+        OwnerPinService pinService = new OwnerPinService();
+
+        assertThatThrownBy(() -> pinService.validate("123"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> pinService.validate("12345"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> pinService.validate("12a4"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

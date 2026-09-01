@@ -21,8 +21,7 @@ import java.util.Properties;
 @Service
 public class OwnerPinService {
 
-    private static final int MINIMUM_PIN_LENGTH = 6;
-    private static final int MAXIMUM_PIN_LENGTH = 128;
+    private static final String PIN_FORMAT = "four-digit-v1";
     private static final int ITERATIONS = 210_000;
     private static final int KEY_LENGTH_BITS = 256;
     private static final int SALT_LENGTH_BYTES = 16;
@@ -37,6 +36,9 @@ public class OwnerPinService {
 
     @PostConstruct
     public synchronized void load() throws IOException {
+        salt = null;
+        pinHash = null;
+
         if (!Files.isRegularFile(pinFile)) {
             return;
         }
@@ -45,6 +47,10 @@ public class OwnerPinService {
 
         try (InputStream inputStream = Files.newInputStream(pinFile)) {
             properties.load(inputStream);
+        }
+
+        if (!PIN_FORMAT.equals(properties.getProperty("format"))) {
+            return;
         }
 
         try {
@@ -98,6 +104,7 @@ public class OwnerPinService {
         );
 
         Properties properties = new Properties();
+        properties.setProperty("format", PIN_FORMAT);
         properties.setProperty(
                 "salt",
                 Base64.getEncoder().encodeToString(newSalt)
@@ -139,15 +146,9 @@ public class OwnerPinService {
     }
 
     public void validate(String pin) {
-        if (pin == null || pin.length() < MINIMUM_PIN_LENGTH) {
+        if (pin == null || !pin.matches("[0-9]{4}")) {
             throw new IllegalArgumentException(
-                    "Use at least 6 characters for the owner PIN."
-            );
-        }
-
-        if (pin.length() > MAXIMUM_PIN_LENGTH) {
-            throw new IllegalArgumentException(
-                    "The owner PIN must be 128 characters or fewer."
+                    "Use exactly 4 numerical digits for the owner PIN."
             );
         }
     }
