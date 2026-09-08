@@ -72,20 +72,40 @@
             width: 100%;
         }
 
-        #copy-menu,
-        #delete-menu {
+        #file-actions {
             margin: 1rem 0;
         }
 
-        #copy-options,
-        #delete-options {
+        #file-actions button {
+            margin: 0.25rem 0.25rem 0.25rem 0;
+        }
+
+        #files-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #files-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
             margin: 0.75rem 0;
         }
 
-        .copy-option,
-        .delete-option {
+        .file-choice {
+            flex-shrink: 0;
+            width: 1.1rem;
+            height: 1.1rem;
+            margin-top: 0.25rem;
+        }
+
+        .file-details {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .file-details .expiration {
             display: block;
-            margin: 0.35rem 0;
         }
 
         #share-result,
@@ -229,6 +249,7 @@
     <img id="share-qr" alt="QR code for the share link">
     <p>Scan this QR code with a phone on the same Wi-Fi.</p>
     <p><a id="share-url" target="_blank" rel="noopener"></a></p>
+    <p id="share-files-label"></p>
     <button id="copy-again" type="button">Copy share link</button>
 </section>
 
@@ -240,43 +261,17 @@
 <h2>Available files</h2>
 <p id="storage-status" th:text="${storageLabel}"></p>
 
-<details id="copy-menu" th:hidden="${#lists.isEmpty(files)}">
-    <summary>Share files</summary>
-
-    <div id="copy-options">
-        <label class="copy-option" th:each="file : ${files}">
-            <input type="checkbox"
-                   class="copy-choice"
-                   th:value="@{/share/{token}(token=${file.shareToken})}"
-                   th:attr="data-share-token=${file.shareToken},data-filename=${file.filename}">
-            <span th:text="${file.filename}"></span>
-        </label>
-    </div>
-
-    <button id="copy-select-all" type="button">Select all</button>
-    <button id="copy-selected" type="button" disabled>
+<div id="file-actions" th:hidden="${#lists.isEmpty(files)}">
+    <button id="select-all" type="button">Select all</button>
+    <button id="share-selected" type="button" disabled>
         Create share link
     </button>
-</details>
-
-<details id="delete-menu" th:hidden="${#lists.isEmpty(files)}">
-    <summary>Delete files</summary>
-
-    <div id="delete-options">
-        <label class="delete-option" th:each="file : ${files}">
-            <input type="checkbox"
-                   class="delete-choice"
-                   th:value="${file.shareToken}"
-                   th:attr="data-filename=${file.filename}">
-            <span th:text="${file.filename}"></span>
-        </label>
-    </div>
-
-    <button id="select-all" type="button">Select all</button>
     <button id="delete-selected" type="button" disabled>
         Delete selected
     </button>
-</details>
+    <span id="selection-status" role="status">0 selected</span>
+</div>
+<p id="file-action-status" aria-live="polite"></p>
 
 <p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
     No files uploaded yet.
@@ -285,11 +280,17 @@
 <ul id="files-list">
     <li th:each="file : ${files}"
         th:attr="data-share-token=${file.shareToken}">
-        <a th:href="@{/download(filename=${file.filename})}"
-           th:attr="data-filename=${file.filename}"
-           th:text="${file.filename}">
-        </a>
-        <small class="expiration" th:text="${file.expirationLabel}"></small>
+        <input type="checkbox"
+               class="file-choice"
+               th:value="${file.shareToken}"
+               th:attr="aria-label=|Select ${file.filename}|,data-filename=${file.filename},data-share-path=@{/share/{token}(token=${file.shareToken})}">
+        <span class="file-details">
+            <a th:href="@{/download(filename=${file.filename})}"
+               th:attr="data-filename=${file.filename}"
+               th:text="${file.filename}">
+            </a>
+            <small class="expiration" th:text="${file.expirationLabel}"></small>
+        </span>
     </li>
 </ul>
 
@@ -309,6 +310,7 @@
     const shareResult = document.getElementById("share-result");
     const shareQr = document.getElementById("share-qr");
     const shareUrl = document.getElementById("share-url");
+    const shareFilesLabel = document.getElementById("share-files-label");
     const copyAgainButton = document.getElementById("copy-again");
     const receiveTools = document.getElementById("receive-tools");
     const receiveStartControls =
@@ -329,14 +331,10 @@
             document.getElementById("stop-receiving");
     const copyNotification =
             document.getElementById("copy-notification");
-    const copyMenu = document.getElementById("copy-menu");
-    const copyOptions = document.getElementById("copy-options");
-    const copySelectAllButton =
-            document.getElementById("copy-select-all");
-    const copySelectedButton =
-            document.getElementById("copy-selected");
-    const deleteMenu = document.getElementById("delete-menu");
-    const deleteOptions = document.getElementById("delete-options");
+    const fileActions = document.getElementById("file-actions");
+    const selectionStatus = document.getElementById("selection-status");
+    const fileActionStatus = document.getElementById("file-action-status");
+    const shareSelectedButton = document.getElementById("share-selected");
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
             document.getElementById("delete-selected");
@@ -344,6 +342,8 @@
 
     let selectedFiles = [];
     let lastShareUrl = "";
+    let lastShareTokens = new Set();
+    let fileActionInProgress = false;
     let lastReceiveUrl = receiveTools.dataset.senderUrl || "";
     let uploadInProgress = false;
     let notificationTimer;
@@ -736,24 +736,32 @@
         return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
     }
 
-    copyOptions.addEventListener("change", updateCopyControls);
+    filesList.addEventListener("change", updateFileControls);
 
-    copySelectAllButton.addEventListener("click", () => {
-        const choices = getCopyChoices();
+    selectAllButton.addEventListener("click", () => {
+        if (fileActionInProgress) {
+            return;
+        }
+
+        const choices = getFileChoices();
         const allSelected = choices.every(choice => choice.checked);
 
         choices.forEach(choice => choice.checked = !allSelected);
-        updateCopyControls();
+        updateFileControls();
     });
 
-    copySelectedButton.addEventListener("click", () => {
-        copyLinks(getCopyChoices().filter(choice => choice.checked));
+    shareSelectedButton.addEventListener("click", () => {
+        createShareLink(getSelectedFileChoices());
+    });
+
+    deleteSelectedButton.addEventListener("click", () => {
+        deleteFiles(getSelectedFileChoices());
     });
 
     copyAgainButton.addEventListener("click", async () => {
         if (lastShareUrl) {
             await copyText(lastShareUrl);
-            uploadStatus.textContent = "Share link copied.";
+            fileActionStatus.textContent = "Share link copied.";
             showNotification();
         }
     });
@@ -824,84 +832,103 @@
         );
     }
 
-    function getCopyChoices() {
+    function getFileChoices() {
         return Array.from(
-                copyOptions.querySelectorAll(".copy-choice")
+                filesList.querySelectorAll(".file-choice")
         );
     }
 
-    function updateCopyControls() {
-        const choices = getCopyChoices();
+    function getSelectedFileChoices() {
+        return getFileChoices().filter(choice => choice.checked);
+    }
+
+    function updateFileControls() {
+        const choices = getFileChoices();
         const selectedCount = choices
                 .filter(choice => choice.checked).length;
 
-        copySelectedButton.disabled = selectedCount === 0;
-        copySelectedButton.textContent = selectedCount === 0
-                ? "Create share link"
-                : "Create share link (" + selectedCount + ")";
-        copySelectAllButton.textContent = choices.length > 0
+        fileActions.hidden = choices.length === 0;
+        emptyMessage.hidden = choices.length !== 0;
+        selectionStatus.textContent = selectedCount + " selected";
+        shareSelectedButton.disabled = fileActionInProgress
+                || selectedCount === 0;
+        deleteSelectedButton.disabled = fileActionInProgress
+                || selectedCount === 0;
+        selectAllButton.disabled = fileActionInProgress;
+        choices.forEach(choice => choice.disabled = fileActionInProgress);
+        selectAllButton.textContent = choices.length > 0
                 && choices.every(choice => choice.checked)
                 ? "Clear selection"
                 : "Select all";
     }
 
-    async function copyLinks(choices) {
-        if (choices.length === 0) {
+    async function createShareLink(choices) {
+        if (fileActionInProgress || choices.length === 0) {
             return;
         }
 
-        let sharePath = choices[0].value;
+        const tokens = choices.map(choice => choice.value);
+        const filenames = choices.map(choice => choice.dataset.filename);
+        let sharePath = choices[0].dataset.sharePath;
         let sharedFileCount = 1;
-        const creationEndpoint = choices.length > 1
-                ? "/share/bundles"
-                : null;
+        fileActionInProgress = true;
+        updateFileControls();
+        fileActionStatus.textContent = "Creating share link...";
 
-        if (creationEndpoint) {
-            copySelectedButton.disabled = true;
-
-            try {
-                const response = await fetch(creationEndpoint, {
+        try {
+            if (choices.length > 1) {
+                const response = await fetch("/share/bundles", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({
-                        tokens: choices.map(choice =>
-                                choice.dataset.shareToken
-                        )
-                    })
+                    body: JSON.stringify({tokens})
                 });
                 const result = await response.json();
 
                 if (!response.ok) {
-                    uploadStatus.textContent = result.message;
+                    fileActionStatus.textContent = result.message;
+                    scheduleAvailableFilesSync();
                     return;
                 }
 
                 sharePath = result.sharePath;
                 sharedFileCount = result.fileCount;
-            } catch (error) {
-                uploadStatus.textContent =
-                        "The combined link could not be created because "
-                        + "the server could not be reached.";
-                return;
-            } finally {
-                updateCopyControls();
             }
+
+            const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
+            await copyText(shareLink);
+            const availableTokens = new Set(
+                    getFileChoices().map(choice => choice.value)
+            );
+            if (tokens.some(token => !availableTokens.has(token))) {
+                fileActionStatus.textContent =
+                        "The selected files changed. Check your selection "
+                        + "and create a new link.";
+                scheduleAvailableFilesSync();
+                return;
+            }
+            showShareResult(shareLink, sharedFileCount);
+            lastShareTokens = new Set(tokens);
+            shareFilesLabel.textContent = filenames.length === 1
+                    ? "File: " + filenames[0]
+                    : "Link for " + sharedFileCount + " selected files.";
+            showNotification(
+                    sharedFileCount === 1
+                            ? "Share link created and copied!"
+                            : "Share link for " + sharedFileCount
+                                    + " files created and copied!",
+                    4000
+            );
+
+            fileActionStatus.textContent = sharedFileCount === 1
+                    ? "File link copied."
+                    : "One link for " + sharedFileCount + " files copied.";
+        } catch (error) {
+            fileActionStatus.textContent =
+                    "The share link could not be created. Please try again.";
+        } finally {
+            fileActionInProgress = false;
+            updateFileControls();
         }
-
-        const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
-        await copyText(shareLink);
-        showShareResult(shareLink, sharedFileCount);
-        showNotification(
-                sharedFileCount === 1
-                        ? "Share link created and copied!"
-                        : "Share link for " + sharedFileCount
-                                + " files created and copied!",
-                4000
-        );
-
-        uploadStatus.textContent = sharedFileCount === 1
-                ? "File link copied."
-                : "One link for " + sharedFileCount + " files copied.";
     }
 
     async function copyText(text) {
@@ -972,11 +999,7 @@
             });
 
             storageStatus.textContent = snapshot.storageLabel;
-            emptyMessage.hidden = snapshot.files.length !== 0;
-            copyMenu.hidden = snapshot.files.length === 0;
-            deleteMenu.hidden = snapshot.files.length === 0;
-            updateCopyControls();
-            updateDeleteControls();
+            updateFileControls();
         } catch (error) {
             // EventSource reconnects automatically if the server restarts.
         } finally {
@@ -999,149 +1022,67 @@
 
         if (existingLink) {
             const existingItem = existingLink.closest("li");
-            const existingCopyChoice = getCopyChoices()
-                    .find(choice => choice.dataset.filename === filename);
-            const existingDeleteChoice = getDeleteChoices()
-                    .find(choice => choice.dataset.filename === filename);
+            const existingChoice = existingItem.querySelector(".file-choice");
+
+            if (existingChoice.value !== shareToken) {
+                existingChoice.checked = false;
+                invalidateShareResult(existingChoice.value);
+            }
 
             existingItem.dataset.shareToken = shareToken;
             existingLink.href = "/download?filename="
                     + encodeURIComponent(filename);
 
-            if (existingCopyChoice) {
-                existingCopyChoice.value = sharePath;
-                existingCopyChoice.dataset.shareToken = shareToken;
-            }
-
-            if (existingDeleteChoice) {
-                existingDeleteChoice.value = shareToken;
-            }
+            existingChoice.value = shareToken;
+            existingChoice.dataset.sharePath = sharePath;
 
             existingItem.querySelector(".expiration")
                     .textContent = expirationLabel;
+            updateFileControls();
             return;
         }
 
         const listItem = document.createElement("li");
+        const checkbox = document.createElement("input");
+        const details = document.createElement("span");
         const link = document.createElement("a");
         const expirationText = document.createElement("small");
 
         listItem.dataset.shareToken = shareToken;
+        checkbox.type = "checkbox";
+        checkbox.className = "file-choice";
+        checkbox.value = shareToken;
+        checkbox.dataset.filename = filename;
+        checkbox.dataset.sharePath = sharePath;
+        checkbox.setAttribute("aria-label", "Select " + filename);
+        details.className = "file-details";
         link.href = "/download?filename=" + encodeURIComponent(filename);
         link.dataset.filename = filename;
         link.textContent = filename;
         expirationText.className = "expiration";
         expirationText.textContent = expirationLabel;
 
-        listItem.appendChild(link);
-        listItem.append(" ");
-        listItem.appendChild(expirationText);
+        details.appendChild(link);
+        details.appendChild(expirationText);
+        listItem.appendChild(checkbox);
+        listItem.appendChild(details);
         filesList.appendChild(listItem);
 
-        addCopyOption(filename, sharePath, shareToken);
-        addDeleteOption(filename, shareToken);
-        emptyMessage.hidden = true;
-        copyMenu.hidden = false;
-        deleteMenu.hidden = false;
+        updateFileControls();
     }
 
-    function addCopyOption(filename, sharePath, shareToken) {
-        const existingChoice = getCopyChoices()
-                .find(choice => choice.dataset.shareToken === shareToken);
-
-        if (existingChoice) {
-            existingChoice.value = sharePath;
+    async function deleteFiles(choices) {
+        if (fileActionInProgress || choices.length === 0) {
             return;
         }
 
-        const label = document.createElement("label");
-        const checkbox = document.createElement("input");
-        const filenameText = document.createElement("span");
-
-        label.className = "copy-option";
-        checkbox.type = "checkbox";
-        checkbox.className = "copy-choice";
-        checkbox.value = sharePath;
-        checkbox.dataset.shareToken = shareToken;
-        checkbox.dataset.filename = filename;
-        filenameText.textContent = filename;
-
-        label.appendChild(checkbox);
-        label.append(" ");
-        label.appendChild(filenameText);
-        copyOptions.appendChild(label);
-        updateCopyControls();
-    }
-
-    deleteOptions.addEventListener("change", updateDeleteControls);
-
-    selectAllButton.addEventListener("click", () => {
-        const choices = getDeleteChoices();
-        const allSelected = choices.every(choice => choice.checked);
-
-        choices.forEach(choice => choice.checked = !allSelected);
-        updateDeleteControls();
-    });
-
-    deleteSelectedButton.addEventListener("click", () => {
-        const selectedTokens = getDeleteChoices()
-                .filter(choice => choice.checked)
-                .map(choice => choice.value);
-
-        deleteFiles(selectedTokens, "selected files");
-    });
-
-    function getDeleteChoices() {
-        return Array.from(
-                deleteOptions.querySelectorAll(".delete-choice")
+        const tokens = choices.map(choice => choice.value);
+        const filenamesByToken = new Map(
+                choices.map(choice => [choice.value, choice.dataset.filename])
         );
-    }
-
-    function updateDeleteControls() {
-        const choices = getDeleteChoices();
-        const selectedCount = choices
-                .filter(choice => choice.checked).length;
-
-        deleteSelectedButton.disabled = selectedCount === 0;
-        deleteSelectedButton.textContent = selectedCount === 0
-                ? "Delete selected"
-                : "Delete selected (" + selectedCount + ")";
-        selectAllButton.textContent = choices.length > 0
-                && choices.every(choice => choice.checked)
-                ? "Clear selection"
-                : "Select all";
-    }
-
-    function addDeleteOption(filename, shareToken) {
-        const existingChoice = getDeleteChoices()
-                .find(choice => choice.value === shareToken);
-
-        if (existingChoice) {
-            return;
-        }
-
-        const label = document.createElement("label");
-        const checkbox = document.createElement("input");
-        const filenameText = document.createElement("span");
-
-        label.className = "delete-option";
-        checkbox.type = "checkbox";
-        checkbox.className = "delete-choice";
-        checkbox.value = shareToken;
-        checkbox.dataset.filename = filename;
-        filenameText.textContent = filename;
-
-        label.appendChild(checkbox);
-        label.append(" ");
-        label.appendChild(filenameText);
-        deleteOptions.appendChild(label);
-        updateDeleteControls();
-    }
-
-    async function deleteFiles(tokens, description) {
-        if (tokens.length === 0) {
-            return;
-        }
+        const description = tokens.length === 1
+                ? '"' + filenamesByToken.get(tokens[0]) + '"'
+                : tokens.length + " selected files";
 
         if (!window.confirm(
                 "Permanently delete " + description + "?"
@@ -1149,13 +1090,9 @@
             return;
         }
 
-        deleteSelectedButton.disabled = true;
-        const filenamesByToken = new Map(
-                getDeleteChoices().map(choice => [
-                    choice.value,
-                    choice.dataset.filename
-                ])
-        );
+        fileActionInProgress = true;
+        updateFileControls();
+        fileActionStatus.textContent = "Deleting selected files...";
 
         try {
             const response = await fetch("/files", {
@@ -1166,7 +1103,7 @@
             const result = await response.json();
 
             if (!response.ok) {
-                uploadStatus.textContent = result.message;
+                fileActionStatus.textContent = result.message;
                 return;
             }
 
@@ -1177,43 +1114,41 @@
             result.deletedTokens.forEach(removeFileFromPage);
 
             storageStatus.textContent = result.storageLabel;
-            uploadStatus.textContent = result.message;
-            emptyMessage.hidden = filesList.children.length !== 0;
-            copyMenu.hidden = filesList.children.length === 0;
-            deleteMenu.hidden = filesList.children.length === 0;
-            shareResult.hidden = true;
-            lastShareUrl = "";
-            updateCopyControls();
-            updateDeleteControls();
+            fileActionStatus.textContent = result.message;
+            updateFileControls();
             showFileActionNotification(
                     "Deleted",
                     deletedFilenames,
                     5000
             );
         } catch (error) {
-            uploadStatus.textContent =
+            fileActionStatus.textContent =
                     "The files could not be deleted because the server "
                     + "could not be reached.";
         } finally {
-            updateDeleteControls();
+            fileActionInProgress = false;
+            updateFileControls();
+            scheduleAvailableFilesSync();
         }
     }
 
     function removeFileFromPage(token) {
-        filesList.querySelector(
-                'li[data-share-token="' + token + '"]'
-        )?.remove();
-
-        getDeleteChoices()
+        getFileChoices()
                 .find(choice => choice.value === token)
-                ?.closest("label")
+                ?.closest("li")
                 .remove();
-
-        getCopyChoices()
-                .find(choice => choice.dataset.shareToken === token)
-                ?.closest("label")
-                .remove();
+        invalidateShareResult(token);
     }
+
+    function invalidateShareResult(token) {
+        if (lastShareTokens.has(token)) {
+            shareResult.hidden = true;
+            lastShareUrl = "";
+            lastShareTokens.clear();
+        }
+    }
+
+    updateFileControls();
 </script>
 </body>
 </html>
