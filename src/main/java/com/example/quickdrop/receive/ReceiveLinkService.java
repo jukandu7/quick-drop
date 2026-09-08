@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,7 +20,14 @@ public class ReceiveLinkService {
     }
 
     @Transactional
-    public LinkDetails create(Duration lifetime) {
+    public LinkDetails start(Duration lifetime) {
+        if (lifetime.isZero() || lifetime.isNegative()) {
+            throw new IllegalArgumentException(
+                    "Receiving time must be greater than zero."
+            );
+        }
+
+        repository.deleteAllInBatch();
         Instant expiresAt = Instant.now().plus(lifetime);
         ReceiveLink link = repository.save(new ReceiveLink(
                 UUID.randomUUID().toString(),
@@ -30,40 +38,51 @@ public class ReceiveLinkService {
     }
 
     @Transactional
-    public Optional<LinkDetails> findActive(String token) {
-        Optional<ReceiveLink> match = repository.findById(token);
+    public Optional<LinkDetails> findCurrentActive() {
+        Instant currentTime = Instant.now();
+        repository.deleteAllByExpiresAtBefore(currentTime);
 
-        if (match.isEmpty()) {
+        List<ReceiveLink> links = repository
+                .findAllByOrderByExpiresAtDesc();
+
+        links.removeIf(link ->
+                !link.getExpiresAt().isAfter(currentTime)
+        );
+
+        if (links.isEmpty()) {
             return Optional.empty();
         }
 
-        ReceiveLink link = match.get();
+        ReceiveLink current = links.getFirst();
 
-        if (!link.getExpiresAt().isAfter(Instant.now())) {
-            repository.delete(link);
-            return Optional.empty();
+        if (links.size() > 1) {
+            repository.deleteAll(links.subList(1, links.size()));
         }
 
-        return Optional.of(new LinkDetails(
-                link.getToken(),
-                link.getExpiresAt()
-        ));
+        return Optional.of(toDetails(current));
     }
 
     @Transactional
-    public boolean delete(String token) {
-        if (!repository.existsById(token)) {
-            return false;
-        }
+    public Optional<LinkDetails> findActive(String token) {
+        return findCurrentActive()
+                .filter(link -> link.token().equals(token));
+    }
 
-        repository.deleteById(token);
-        return true;
+    @Transactional
+    public boolean stop() {
+        boolean wasActive = findCurrentActive().isPresent();
+        repository.deleteAllInBatch();
+        return wasActive;
     }
 
     @Scheduled(fixedRate = 60_000)
     @Transactional
     public void deleteExpiredLinks() {
         repository.deleteAllByExpiresAtBefore(Instant.now());
+    }
+
+    private LinkDetails toDetails(ReceiveLink link) {
+        return new LinkDetails(link.getToken(), link.getExpiresAt());
     }
 
     public record LinkDetails(String token, Instant expiresAt) {

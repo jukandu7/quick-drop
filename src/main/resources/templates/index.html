@@ -114,13 +114,6 @@
             margin: 1.5rem 0;
         }
 
-        #network-qr {
-            display: block;
-            height: 12rem;
-            max-width: 100%;
-            width: 12rem;
-        }
-
         #copy-notification {
             background: #1f7a3f;
             border-radius: 0.5rem;
@@ -153,55 +146,53 @@
     <button type="submit">Lock owner dashboard</button>
 </form>
 <p>
-    Send files from another device:
-    <a id="network-address"
-       th:href="${senderUrl}"
-       th:text="${senderUrl}"></a>
-</p>
-<img id="network-qr"
-     th:src="@{/qr(text=${senderUrl})}"
-     th:alt="|QR code for ${senderUrl}|">
-<p>
-    <small>
-        Scan this code to open a sender-only page. It cannot see or manage
-        your stored files.
-    </small>
-</p>
-<p>
-    Both devices must be on the same Wi-Fi network.
-</p>
-<p>
     Full owner access on another device:
     <a th:href="${shareBaseUrl}" th:text="${shareBaseUrl}"></a>
     <small>(owner PIN required)</small>
 </p>
 
-<section id="receive-tools">
-    <h2>Receive files from someone else</h2>
+<section id="receive-tools"
+         th:attr="data-active=${receivingActive},data-sender-url=${senderUrl}">
+    <h2>Receiving mode</h2>
     <p>
-        Create an upload-only link. The sender cannot see or delete your
-        existing files.
+        Start receiving to create one temporary sender link and QR code.
+        The sender cannot see or manage your stored files.
     </p>
-    <label for="receive-expiration">Link expires after</label>
-    <select id="receive-expiration">
-        <option value="15m">15 minutes</option>
-        <option value="1h" selected>1 hour</option>
-        <option value="24h">24 hours</option>
-    </select>
-    <button id="create-receive-link" type="button">
-        Create receive link
-    </button>
-    <p id="receive-status" aria-live="polite"></p>
+
+    <div id="receive-start-controls" th:hidden="${receivingActive}">
+        <label for="receive-expiration">Receive for</label>
+        <select id="receive-expiration">
+            <option value="15m">15 minutes</option>
+            <option value="1h" selected>1 hour</option>
+            <option value="24h">24 hours</option>
+        </select>
+        <button id="start-receiving" type="button">
+            Start receiving
+        </button>
+    </div>
+
+    <p id="receive-status"
+       aria-live="polite"
+       th:text="${receivingActive} ? 'Receiving is active.' : 'Receiving is off.'">
+        Receiving is off.
+    </p>
 </section>
 
-<section id="receive-result" hidden>
+<section id="receive-result" th:hidden="${!receivingActive}">
     <h2>Ready to receive</h2>
     <img id="receive-qr" alt="QR code for the receive link">
-    <p>Have the sender scan this code while on the same Wi-Fi.</p>
-    <p id="receive-expiration-label"></p>
-    <p><a id="receive-url" target="_blank" rel="noopener"></a></p>
+    <p>Have the sender scan this code while on the same Wi-Fi network.</p>
+    <p id="receive-expiration-label"
+       th:text="${receivingExpirationLabel}"></p>
+    <p>
+        <a id="receive-url"
+           target="_blank"
+           rel="noopener"
+           th:href="${senderUrl}"
+           th:text="${senderUrl}"></a>
+    </p>
     <button id="copy-receive-link" type="button">
-        Copy receive link
+        Copy sender link
     </button>
     <button id="stop-receiving" type="button">
         Stop receiving
@@ -319,10 +310,13 @@
     const shareQr = document.getElementById("share-qr");
     const shareUrl = document.getElementById("share-url");
     const copyAgainButton = document.getElementById("copy-again");
+    const receiveTools = document.getElementById("receive-tools");
+    const receiveStartControls =
+            document.getElementById("receive-start-controls");
     const receiveExpiration =
             document.getElementById("receive-expiration");
-    const createReceiveButton =
-            document.getElementById("create-receive-link");
+    const startReceivingButton =
+            document.getElementById("start-receiving");
     const receiveStatus = document.getElementById("receive-status");
     const receiveResult = document.getElementById("receive-result");
     const receiveQr = document.getElementById("receive-qr");
@@ -350,8 +344,7 @@
 
     let selectedFiles = [];
     let lastShareUrl = "";
-    let lastReceiveUrl = "";
-    let lastReceiveToken = "";
+    let lastReceiveUrl = receiveTools.dataset.senderUrl || "";
     let uploadInProgress = false;
     let notificationTimer;
     let uploadedNotificationTimer;
@@ -382,19 +375,24 @@
 
     browseFilesButton.addEventListener("click", () => fileInput.click());
 
-    createReceiveButton.addEventListener("click", createReceiveLink);
+    if (lastReceiveUrl) {
+        receiveQr.src = "/qr?text="
+                + encodeURIComponent(lastReceiveUrl);
+    }
+
+    startReceivingButton.addEventListener("click", startReceiving);
 
     copyReceiveButton.addEventListener("click", async () => {
         if (lastReceiveUrl) {
             await copyText(lastReceiveUrl);
-            receiveStatus.textContent = "Receive link copied.";
-            showNotification("Receive link copied!");
+            receiveStatus.textContent = "Sender link copied.";
+            showNotification("Sender link copied!");
         }
     });
 
     stopReceivingButton.addEventListener("click", async () => {
-        if (!lastReceiveToken || !window.confirm(
-                "Stop accepting uploads through this receive link?"
+        if (!lastReceiveUrl || !window.confirm(
+                "Stop receiving files and disable this sender link?"
         )) {
             return;
         }
@@ -402,10 +400,9 @@
         stopReceivingButton.disabled = true;
 
         try {
-            const response = await fetch(
-                    "/receive-links/" + encodeURIComponent(lastReceiveToken),
-                    {method: "DELETE"}
-            );
+            const response = await fetch("/receive-links", {
+                method: "DELETE"
+            });
             const result = await response.json();
 
             if (!response.ok) {
@@ -414,9 +411,10 @@
             }
 
             receiveResult.hidden = true;
+            receiveStartControls.hidden = false;
             lastReceiveUrl = "";
-            lastReceiveToken = "";
             receiveStatus.textContent = result.message;
+            showNotification("Receiving stopped.");
         } catch (error) {
             receiveStatus.textContent =
                     "The receive link could not be stopped because the "
@@ -426,9 +424,9 @@
         }
     });
 
-    async function createReceiveLink() {
-        createReceiveButton.disabled = true;
-        receiveStatus.textContent = "Creating receive link...";
+    async function startReceiving() {
+        startReceivingButton.disabled = true;
+        receiveStatus.textContent = "Starting receiving...";
 
         try {
             const response = await fetch("/receive-links", {
@@ -449,26 +447,27 @@
                     result.receivePath,
                     shareBaseUrl + "/"
             ).href;
-            lastReceiveToken = result.token;
             receiveUrl.href = lastReceiveUrl;
             receiveUrl.textContent = lastReceiveUrl;
             receiveQr.src = "/qr?text="
                     + encodeURIComponent(lastReceiveUrl);
             receiveExpirationLabel.textContent = result.expirationLabel;
             receiveResult.hidden = false;
+            receiveStartControls.hidden = true;
             await copyText(lastReceiveUrl);
-            receiveStatus.textContent = "Receive link created and copied.";
-            showNotification("Receive link copied!");
+            receiveStatus.textContent =
+                    "Receiving started. Sender link copied.";
+            showNotification("Receiving started. Sender link copied!");
             receiveResult.scrollIntoView({
                 behavior: "smooth",
                 block: "nearest"
             });
         } catch (error) {
             receiveStatus.textContent =
-                    "The receive link could not be created because the "
+                    "Receiving could not be started because the "
                     + "server could not be reached.";
         } finally {
-            createReceiveButton.disabled = false;
+            startReceivingButton.disabled = false;
         }
     }
 

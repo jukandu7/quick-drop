@@ -108,10 +108,23 @@ public class HomeController {
 
         FilesSnapshot snapshot = createFilesSnapshot();
         String shareBaseUrl = createShareBaseUrl();
+        ReceiveLinkService.LinkDetails receivingSession =
+                receiveLinkService.findCurrentActive().orElse(null);
+        String senderUrl = receivingSession == null
+                ? null
+                : shareBaseUrl + "/receive/" + receivingSession.token();
+
         model.addAttribute("files", snapshot.files());
         model.addAttribute("storageLabel", snapshot.storageLabel());
         model.addAttribute("shareBaseUrl", shareBaseUrl);
-        model.addAttribute("senderUrl", shareBaseUrl + "/send");
+        model.addAttribute("senderUrl", senderUrl);
+        model.addAttribute("receivingActive", receivingSession != null);
+        model.addAttribute(
+                "receivingExpirationLabel",
+                receivingSession == null
+                        ? null
+                        : formatExpiration(receivingSession.expiresAt())
+        );
         model.addAttribute(
                 "remoteOwnerSession",
                 ownerAccessService.isRemoteAuthenticated(request)
@@ -150,7 +163,7 @@ public class HomeController {
     }
 
     @PostMapping("/receive-links")
-    public ResponseEntity<ReceiveLinkResult> createReceiveLink(
+    public ResponseEntity<ReceiveLinkResult> startReceiving(
             @RequestBody ReceiveLinkRequest request
     ) {
         Duration lifetime;
@@ -159,37 +172,33 @@ public class HomeController {
             lifetime = calculateReceiveLifetime(request.expiration());
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ReceiveLinkResult(
-                    "Choose a valid receive-link expiration.",
-                    null,
+                    "Choose a valid receiving time.",
                     null,
                     null
             ));
         }
 
         ReceiveLinkService.LinkDetails link =
-                receiveLinkService.create(lifetime);
+                receiveLinkService.start(lifetime);
 
         return ResponseEntity.ok(new ReceiveLinkResult(
-                "Receive link created.",
+                "Receiving started.",
                 "/receive/" + link.token(),
-                formatExpiration(link.expiresAt()),
-                link.token()
+                formatExpiration(link.expiresAt())
         ));
     }
 
-    @DeleteMapping("/receive-links/{token}")
-    public ResponseEntity<ReceiveLinkStatus> deleteReceiveLink(
-            @PathVariable String token
-    ) {
-        if (!receiveLinkService.delete(token)) {
+    @DeleteMapping("/receive-links")
+    public ResponseEntity<ReceiveLinkStatus> stopReceiving() {
+        if (!receiveLinkService.stop()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ReceiveLinkStatus(
-                            "This receive link is already inactive."
+                            "Receiving is already stopped."
                     ));
         }
 
         return ResponseEntity.ok(new ReceiveLinkStatus(
-                "Receive link stopped."
+                "Receiving stopped."
         ));
     }
 
@@ -204,8 +213,8 @@ public class HomeController {
                 .orElse(null);
 
         model.addAttribute("receiveToken", token);
-        model.addAttribute("senderLabel", "Temporary sender link");
-        model.addAttribute("senderHeading", "Send files with this link");
+        model.addAttribute("senderLabel", "Quick Drop sender");
+        model.addAttribute("senderHeading", "Send files to Quick Drop");
         model.addAttribute(
                 "senderDescription",
                 "This page can only send files. It cannot view, download, "
@@ -219,6 +228,15 @@ public class HomeController {
         if (link == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             model.addAttribute("active", false);
+            model.addAttribute(
+                    "inactiveHeading",
+                    "Quick Drop is not receiving files"
+            );
+            model.addAttribute(
+                    "inactiveDescription",
+                    "This receiving session ended or expired. Ask the "
+                            + "owner to start receiving again."
+            );
             return "receive";
         }
 
@@ -232,25 +250,39 @@ public class HomeController {
     }
 
     @GetMapping("/send")
-    public String showSenderPage(Model model) {
-        model.addAttribute("active", true);
-        model.addAttribute("senderLabel", "Device sender");
-        model.addAttribute("senderHeading", "Send files to Quick Drop");
+    public String showRetiredSenderPage(
+            Model model,
+            HttpServletResponse response
+    ) {
+        response.setStatus(HttpServletResponse.SC_GONE);
+        model.addAttribute("active", false);
+        model.addAttribute("senderLabel", "Sender link replaced");
+        model.addAttribute("senderHeading", "Ask for the current QR code");
         model.addAttribute(
                 "senderDescription",
-                "Upload from this device without seeing or managing the "
-                        + "owner's stored files."
+                "Quick Drop now uses a new link each time receiving starts."
         );
-        model.addAttribute("uploadAction", "/send/upload");
-        model.addAttribute("expirationLabel", null);
+        model.addAttribute(
+                "inactiveHeading",
+                "This old sender address cannot accept files"
+        );
+        model.addAttribute(
+                "inactiveDescription",
+                "Ask the owner to start receiving and scan the new QR code."
+        );
         return "receive";
     }
 
     @PostMapping("/send/upload")
     public synchronized ResponseEntity<ReceiveUploadResult> senderUpload(
             @RequestParam("file") MultipartFile file
-    ) throws IOException {
-        return storeReceivedUpload(file);
+    ) {
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(new ReceiveUploadResult(
+                        "This old sender address is inactive. Scan the "
+                                + "current QR code.",
+                        null
+                ));
     }
 
     @PostMapping("/receive/{token}/upload")
@@ -815,8 +847,7 @@ public class HomeController {
     public record ReceiveLinkResult(
             String message,
             String receivePath,
-            String expirationLabel,
-            String token
+            String expirationLabel
     ) {
     }
 

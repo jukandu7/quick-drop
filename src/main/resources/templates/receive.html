@@ -152,8 +152,12 @@
 </section>
 
 <section th:unless="${active}">
-    <h2>This receive link is no longer available</h2>
-    <p>It may have expired. Ask the owner to create a new receive link.</p>
+    <h2 th:text="${inactiveHeading}">
+        Quick Drop is not receiving files
+    </h2>
+    <p th:text="${inactiveDescription}">
+        Ask the owner to start receiving and scan the new QR code.
+    </p>
 </section>
 </main>
 

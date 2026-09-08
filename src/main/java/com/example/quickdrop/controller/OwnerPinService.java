@@ -137,7 +137,8 @@ public class OwnerPinService {
                         StandardCopyOption.REPLACE_EXISTING
                 );
             }
-        } finally {
+        }
+        finally {
             Files.deleteIfExists(temporaryFile);
         }
 
@@ -171,7 +172,8 @@ public class OwnerPinService {
                     "Owner PIN protection is unavailable.",
                     exception
             );
-        } finally {
+        }
+        finally {
             specification.clearPassword();
         }
     }

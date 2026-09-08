@@ -146,10 +146,10 @@ class OwnerAccessFilterTests {
     }
 
     @Test
-    void senderPageAndUploadsRemainPublic() throws Exception {
+    void senderSessionPageAndUploadsRemainPublic() throws Exception {
         MockHttpServletRequest pageRequest = request(
                 "GET",
-                "/send",
+                "/receive/example-token",
                 "192.168.1.25"
         );
         MockFilterChain pageChain = new MockFilterChain();
@@ -164,7 +164,7 @@ class OwnerAccessFilterTests {
 
         MockHttpServletRequest uploadRequest = request(
                 "POST",
-                "/send/upload",
+                "/receive/example-token/upload",
                 "192.168.1.25"
         );
         MockFilterChain uploadChain = new MockFilterChain();
