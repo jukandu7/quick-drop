@@ -44,6 +44,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -475,6 +477,68 @@ public class HomeController {
         return createDownloadResponse(filename);
     }
 
+    @PostMapping(value = "/download/selected",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public void downloadSelected(
+            @RequestParam(name = "tokens", required = false) List<String> tokens,
+            HttpServletResponse response
+    ) throws IOException {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+
+        if (tokens == null || tokens.isEmpty()
+                || tokens.stream().anyMatch(token -> token == null || token.isBlank())) {
+            downloadError(response, HttpServletResponse.SC_BAD_REQUEST,
+                    "Select at least one file to download.");
+            return;
+        }
+
+        List<String> filenames = new ArrayList<>();
+        for (String token : new LinkedHashSet<>(tokens)) {
+            String filename = shareLinkService.findFilename(token).orElse(null);
+            Path filePath = filename == null
+                    ? null : uploadDirectory.resolve(filename).normalize();
+
+            if (filePath == null || !uploadDirectory.equals(filePath.getParent())
+                    || !filename.equals(filePath.getFileName().toString())
+                    || !Files.isRegularFile(filePath)) {
+                downloadError(response, HttpServletResponse.SC_CONFLICT,
+                        "A selected file expired or is no longer available. "
+                                + "Refresh the file list and try again.");
+                return;
+            }
+            filenames.add(filename);
+        }
+
+        boolean singleFile = filenames.size() == 1;
+        String downloadName = singleFile ? filenames.getFirst() : "quick-drop-files.zip";
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition
+                .attachment()
+                .filename(downloadName, StandardCharsets.UTF_8)
+                .build().toString());
+
+        // Stream directly to the browser without buffering or an async timeout.
+        if (singleFile) {
+            Path filePath = uploadDirectory.resolve(downloadName);
+            response.setContentType(detectMediaType(filePath).toString());
+            response.setContentLengthLong(Files.size(filePath));
+            Files.copy(filePath, response.getOutputStream());
+        } else {
+            response.setContentType("application/zip");
+            writeZip(response.getOutputStream(), filenames, true);
+        }
+    }
+
+    private void downloadError(
+            HttpServletResponse response,
+            int status,
+            String message
+    ) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.TEXT_PLAIN_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write(message);
+    }
+
     @GetMapping("/share/{token}")
     public ResponseEntity<Resource> downloadSharedFile(
             @PathVariable String token
@@ -666,6 +730,14 @@ public class HomeController {
             OutputStream outputStream,
             List<String> filenames
     ) throws IOException {
+        writeZip(outputStream, filenames, false);
+    }
+
+    private void writeZip(
+            OutputStream outputStream,
+            List<String> filenames,
+            boolean requireAllFiles
+    ) throws IOException {
         try (ZipOutputStream zipOutputStream =
                      new ZipOutputStream(outputStream)) {
             for (String filename : filenames) {
@@ -675,6 +747,9 @@ public class HomeController {
 
                 if (!filePath.startsWith(uploadDirectory)
                         || !Files.isRegularFile(filePath)) {
+                    if (requireAllFiles) {
+                        throw new IOException("A selected file became unavailable.");
+                    }
                     continue;
                 }
 

@@ -263,6 +263,9 @@
 
 <div id="file-actions" th:hidden="${#lists.isEmpty(files)}">
     <button id="select-all" type="button">Select all</button>
+    <button id="download-selected" type="button" disabled>
+        Download selected
+    </button>
     <button id="share-selected" type="button" disabled>
         Create share link
     </button>
@@ -270,6 +273,7 @@
         Delete selected
     </button>
     <span id="selection-status" role="status">0 selected</span>
+    <p>Multiple files download as a ZIP.</p>
 </div>
 <p id="file-action-status" aria-live="polite"></p>
 
@@ -335,6 +339,7 @@
     const selectionStatus = document.getElementById("selection-status");
     const fileActionStatus = document.getElementById("file-action-status");
     const shareSelectedButton = document.getElementById("share-selected");
+    const downloadSelectedButton = document.getElementById("download-selected");
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
             document.getElementById("delete-selected");
@@ -344,6 +349,7 @@
     let lastShareUrl = "";
     let lastShareTokens = new Set();
     let fileActionInProgress = false;
+    let downloadRequestCount = 0;
     let lastReceiveUrl = receiveTools.dataset.senderUrl || "";
     let uploadInProgress = false;
     let notificationTimer;
@@ -754,6 +760,10 @@
         createShareLink(getSelectedFileChoices());
     });
 
+    downloadSelectedButton.addEventListener("click", () => {
+        downloadSelectedFiles(getSelectedFileChoices());
+    });
+
     deleteSelectedButton.addEventListener("click", () => {
         deleteFiles(getSelectedFileChoices());
     });
@@ -852,6 +862,8 @@
         selectionStatus.textContent = selectedCount + " selected";
         shareSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
+        downloadSelectedButton.disabled = fileActionInProgress
+                || selectedCount === 0;
         deleteSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
         selectAllButton.disabled = fileActionInProgress;
@@ -860,6 +872,65 @@
                 && choices.every(choice => choice.checked)
                 ? "Clear selection"
                 : "Select all";
+    }
+
+    function downloadSelectedFiles(choices) {
+        if (fileActionInProgress || choices.length === 0) {
+            return;
+        }
+
+        // A native download streams to disk instead of buffering a large Blob.
+        // Each request has its own target so another click won't interrupt it.
+        const target = document.createElement("iframe");
+        target.name = "download-" + (++downloadRequestCount);
+        target.title = "Selected file download";
+        target.hidden = true;
+        target.addEventListener("load", () => {
+            const page = target.contentDocument;
+            if (!page || page.URL === "about:blank") {
+                return;
+            }
+
+            // Attachments go to the browser; only an error page loads here.
+            let message = "Download could not start. Check your connection and try again.";
+            if (page.contentType === "text/plain") {
+                message = page.body.textContent.trim() || message;
+            } else if (page.contentType === "application/json") {
+                try {
+                    message = JSON.parse(page.body.textContent).message || message;
+                } catch (error) {
+                    // Keep the friendly fallback if the response is not valid JSON.
+                }
+            }
+            fileActionStatus.textContent = message;
+            showNotification(message, 6000);
+            syncAvailableFiles();
+            target.remove();
+        });
+        document.body.appendChild(target);
+
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "/download/selected";
+        form.target = target.name;
+        form.hidden = true;
+        choices.forEach(choice => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "tokens";
+            input.value = choice.value;
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+
+        const message = choices.length === 1
+                ? "Download requested. Check your browser's downloads."
+                : "ZIP download requested for " + choices.length
+                        + " files. Check your browser's downloads.";
+        fileActionStatus.textContent = message;
+        showNotification(message, 4000);
     }
 
     async function createShareLink(choices) {
