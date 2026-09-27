@@ -71,15 +71,15 @@
 
     <div th:if="${setupRequired}">
         <p>
-            The owner PIN has not been created yet. On the laptop running
+            The owner PIN has not been created yet. On the computer running
             Quick Drop, open <strong>localhost:8080</strong> to finish setup.
         </p>
     </div>
 
     <div th:unless="${setupRequired}">
         <p>
-            Enter the owner PIN to see files and use the dashboard on this
-            device.
+            Enter the owner PIN to unlock Send files and Receive files on this
+            computer, tablet, or phone. You can switch views while unlocked without entering it again.
         </p>
 
         <form action="/owner/login" method="post">

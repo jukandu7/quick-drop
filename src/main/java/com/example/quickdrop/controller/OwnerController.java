@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 
@@ -49,7 +50,8 @@ public class OwnerController {
             @RequestParam String confirmPin,
             HttpServletRequest request,
             HttpServletResponse response,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) throws IOException {
         boolean configured = ownerPinService.isConfigured();
         model.addAttribute("configured", configured);
@@ -76,6 +78,12 @@ public class OwnerController {
             return "owner-setup";
         }
 
+        redirectAttributes.addFlashAttribute(
+                "pinNotice",
+                configured
+                        ? "Owner PIN changed successfully. Other devices will need to unlock with the new PIN."
+                        : "Owner PIN created successfully."
+        );
         return "redirect:/";
     }
 

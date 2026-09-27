@@ -72,6 +72,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
     private boolean isProtectedPath(String requestPath) {
         return requestPath.equals("/")
                 || requestPath.equals("/api/files")
+                || requestPath.equals("/api/status")
                 || requestPath.equals("/events/files")
                 || requestPath.equals("/upload")
                 || requestPath.equals("/download")

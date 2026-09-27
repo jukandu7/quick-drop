@@ -84,6 +84,12 @@
             dashboard. Receive and share links will not require it.
         </p>
 
+        <p id="pin-error"
+           class="error"
+           role="alert"
+           th:if="${error}"
+           th:text="${error}"></p>
+
         <form action="/owner/setup" method="post">
             <label for="pin">New owner PIN</label>
             <input id="pin"
@@ -94,6 +100,7 @@
                    pattern="[0-9]{4}"
                    minlength="4"
                    maxlength="4"
+                   th:attr="aria-invalid=${error != null},aria-describedby=${error != null ? 'pin-rules pin-error' : 'pin-rules'}"
                    autocomplete="new-password"
                    autofocus
                    required>
@@ -107,21 +114,17 @@
                    pattern="[0-9]{4}"
                    minlength="4"
                    maxlength="4"
+                   th:attr="aria-invalid=${error != null},aria-describedby=${error != null ? 'pin-rules pin-error' : 'pin-rules'}"
                    autocomplete="new-password"
                    required>
 
-            <small>Use exactly four numerical digits.</small>
+            <small id="pin-rules" th:text="${configured} ? 'Use exactly four numerical digits, different from your current PIN.' : 'Use exactly four numerical digits.'">Use exactly four numerical digits.</small>
 
             <button type="submit"
                     th:text="${configured} ? 'Change owner PIN' : 'Create owner PIN'">
                 Create owner PIN
             </button>
         </form>
-
-        <p class="error"
-           role="alert"
-           th:if="${error}"
-           th:text="${error}"></p>
 
         <p th:if="${configured}"><a href="/">Back to Quick Drop</a></p>
     </div>

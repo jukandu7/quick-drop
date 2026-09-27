@@ -26,13 +26,19 @@ public class OwnerPinService {
     private static final int KEY_LENGTH_BITS = 256;
     private static final int SALT_LENGTH_BYTES = 16;
 
-    private final Path pinFile = Path.of("data", "owner-auth.properties")
-            .toAbsolutePath()
-            .normalize();
+    private final Path pinFile;
     private final SecureRandom secureRandom = new SecureRandom();
 
     private byte[] salt;
     private byte[] pinHash;
+
+    public OwnerPinService() {
+        this(Path.of("data", "owner-auth.properties"));
+    }
+
+    OwnerPinService(Path pinFile) {
+        this.pinFile = pinFile.toAbsolutePath().normalize();
+    }
 
     @PostConstruct
     public synchronized void load() throws IOException {
@@ -91,6 +97,12 @@ public class OwnerPinService {
 
     public synchronized void save(String pin) throws IOException {
         validate(pin);
+
+        if (matches(pin)) {
+            throw new IllegalArgumentException(
+                    "Your new PIN is the same as your current PIN. Choose a different PIN."
+            );
+        }
 
         byte[] newSalt = new byte[SALT_LENGTH_BYTES];
         secureRandom.nextBytes(newSalt);

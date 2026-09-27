@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Quick Drop</title>
     <style>
         @font-face {
@@ -20,6 +21,19 @@
         body {
             font-size: 1rem;
             line-height: 1.5;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        #pin-notice {
+            background: #eaf6ed;
+            border: 1px solid #24743c;
+            border-radius: 0.5rem;
+            color: #16552a;
+            max-width: 36rem;
+            padding: 0.75rem 1rem;
         }
 
         button,
@@ -59,6 +73,34 @@
         #drop-zone.drag-over {
             background: #e8f1ff;
             border-color: #2869d8;
+        }
+
+        #mode-switch {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        #mode-switch button {
+            padding: 0.65rem 1rem;
+            border: 2px solid #777;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        #mode-switch button[aria-pressed="true"] {
+            background: #e8f1ff;
+            border-color: #2869d8;
+            font-weight: 700;
+        }
+
+        #owner-address {
+            display: block;
+            background: #f3f3f3;
+            padding: 0.75rem;
+            font-weight: 700;
+            user-select: all;
         }
 
         .upload-item {
@@ -108,6 +150,7 @@
             display: block;
         }
 
+        #connect-device,
         #share-result,
         #receive-result {
             border: 1px solid #aaa;
@@ -117,14 +160,16 @@
             padding: 1rem;
         }
 
+        #owner-qr,
         #share-qr,
         #receive-qr {
             display: block;
-            height: 20rem;
+            height: auto;
             max-width: 100%;
             width: 20rem;
         }
 
+        #owner-address,
         #share-url,
         #receive-url {
             overflow-wrap: anywhere;
@@ -132,6 +177,14 @@
 
         #receive-tools {
             margin: 1.5rem 0;
+        }
+
+        #guest-access {
+            margin: 1rem 0;
+        }
+
+        #guest-access > summary {
+            cursor: pointer;
         }
 
         #copy-notification {
@@ -158,66 +211,27 @@
 </head>
 <body th:attr="data-share-base-url=${shareBaseUrl}">
 <h1>Quick Drop</h1>
-<p><strong>Owner dashboard</strong> — manage Quick Drop's files and links.</p>
+<p id="pin-notice" role="status" aria-live="polite"
+   th:if="${pinNotice}" th:text="${pinNotice}"></p>
+<p><strong>Owner dashboard</strong> — send and receive files on any connected device.</p>
+<p id="connection-status" role="status" aria-live="polite">Checking connection...</p>
+<p id="connection-help" hidden></p>
+<p id="owner-unlock" hidden><a href="/owner/login">Unlock owner dashboard</a></p>
 <p th:if="${localOwner}"><a href="/owner/setup">Change owner PIN</a></p>
 <form th:if="${remoteOwnerSession}"
       action="/owner/logout"
       method="post">
     <button type="submit">Lock owner dashboard</button>
 </form>
-<p>
-    Full owner access on another device:
-    <a th:href="${shareBaseUrl}" th:text="${shareBaseUrl}"></a>
-    <small>(owner PIN required)</small>
-</p>
+<div id="mode-switch" role="group" aria-label="Transfer mode">
+    <button id="send-mode-button" type="button" aria-pressed="true" aria-controls="send-panel">Send files</button>
+    <button id="receive-mode-button" type="button" aria-pressed="false" aria-controls="receive-panel">Receive files</button>
+</div>
+<p>Switch views anytime without unlocking again. Uploads keep running in either view.</p>
 
-<section id="receive-tools"
-         th:attr="data-active=${receivingActive},data-sender-url=${senderUrl}">
-    <h2>Receiving mode</h2>
-    <p>
-        Start receiving to create one temporary sender link and QR code.
-        The sender cannot see or manage your stored files.
-    </p>
-
-    <div id="receive-start-controls" th:hidden="${receivingActive}">
-        <label for="receive-expiration">Receive for</label>
-        <select id="receive-expiration">
-            <option value="15m">15 minutes</option>
-            <option value="1h" selected>1 hour</option>
-            <option value="24h">24 hours</option>
-        </select>
-        <button id="start-receiving" type="button">
-            Start receiving
-        </button>
-    </div>
-
-    <p id="receive-status"
-       aria-live="polite"
-       th:text="${receivingActive} ? 'Receiving is active.' : 'Receiving is off.'">
-        Receiving is off.
-    </p>
-</section>
-
-<section id="receive-result" th:hidden="${!receivingActive}">
-    <h2>Ready to receive</h2>
-    <img id="receive-qr" alt="QR code for the receive link">
-    <p>Have the sender scan this code while on the same Wi-Fi network.</p>
-    <p id="receive-expiration-label"
-       th:text="${receivingExpirationLabel}"></p>
-    <p>
-        <a id="receive-url"
-           target="_blank"
-           rel="noopener"
-           th:href="${senderUrl}"
-           th:text="${senderUrl}"></a>
-    </p>
-    <button id="copy-receive-link" type="button">
-        Copy sender link
-    </button>
-    <button id="stop-receiving" type="button">
-        Stop receiving
-    </button>
-</section>
+<section id="send-panel" aria-labelledby="send-heading">
+<h2 id="send-heading">Send files</h2>
+<p>Upload files from this device. They appear in Receive files on your other connected devices.</p>
 
 <form id="upload-form"
       action="/upload"
@@ -240,25 +254,35 @@
     </select>
     <small>Files upload automatically after you choose or drop them.</small>
 </form>
+</section>
 
+<div id="upload-activity" role="region" aria-label="Upload progress">
 <div id="upload-queue"></div>
 <p id="upload-status" aria-live="polite"></p>
+<button id="retry-failed" type="button" hidden>Retry failed</button>
+<p id="retry-note" hidden>
+    Failed files can be retried while this page stays open.
+    Choosing a new batch replaces these results. Retries keep the original delete-after setting.
+</p>
+</div>
+
+<section id="receive-panel" aria-labelledby="receive-heading" hidden>
+<h2 id="receive-heading">Receive files</h2>
+<p>
+    Available files update automatically, including uploads from this device.
+    Select files and download them to save a copy on this device.
+</p>
 
 <section id="share-result" hidden>
     <h2>Ready to share</h2>
     <img id="share-qr" alt="QR code for the share link">
-    <p>Scan this QR code with a phone on the same Wi-Fi.</p>
+    <p>Open this link in another device's browser, or scan the QR code. Use the same local network.</p>
     <p><a id="share-url" target="_blank" rel="noopener"></a></p>
     <p id="share-files-label"></p>
+    <p id="share-network-status" hidden>Reconnect to Quick Drop to use this link.</p>
     <button id="copy-again" type="button">Copy share link</button>
 </section>
 
-<div id="copy-notification"
-     role="status"
-     aria-live="polite"
-     aria-atomic="true"></div>
-
-<h2>Available files</h2>
 <p id="storage-status" th:text="${storageLabel}"></p>
 
 <div id="file-actions" th:hidden="${#lists.isEmpty(files)}">
@@ -297,7 +321,73 @@
         </span>
     </li>
 </ul>
+</section>
 
+<section id="connect-device" aria-labelledby="connect-device-heading">
+    <h2 id="connect-device-heading">Connect another device</h2>
+    <p>Works with desktops, laptops, tablets, and phones. No app installation is needed on the connecting device.</p>
+    <p><strong>Open on another computer</strong></p>
+    <ol>
+        <li>Connect it to the same local network (Wi-Fi, Ethernet, or hotspot).</li>
+        <li>Open a browser and type or paste the address below into its address bar.</li>
+        <li>Enter your four-digit owner PIN, then choose Send files or Receive files.</li>
+    </ol>
+    <p><a id="owner-address" th:href="${shareBaseUrl}" th:text="${shareBaseUrl}" hidden></a></p>
+    <button id="copy-owner-link" type="button" disabled>Copy address</button>
+    <p id="network-status">Checking the host computer's network address...</p>
+    <p>Copy this address to send it to your other device, or type it there. QR scanning is optional.</p>
+    <details id="device-qr-options">
+        <summary>Or scan a QR code</summary>
+        <img id="owner-qr" alt="QR code to connect your device to the owner dashboard" hidden>
+    </details>
+    <p>Keep Quick Drop running on the host computer. If its network changes, use the updated address or QR code shown here.</p>
+    <p>
+        Full owner access: connected devices can upload, view, download, share, and delete files.
+        Use this for your own trusted devices; your PIN is not included in the address or QR code.
+    </p>
+</section>
+
+<details id="guest-access">
+    <summary>Let someone send files (optional)</summary>
+    <section id="receive-tools"
+             th:attr="data-active=${receivingActive},data-sender-url=${senderUrl}">
+        <h2>Guest uploads</h2>
+        <p>
+            Create a temporary upload-only link for someone else. Guests do not need
+            your owner PIN and cannot see, download, share, or delete your stored files.
+            Use Connect another device above for two-way transfers with your own devices.
+        </p>
+        <div id="receive-start-controls" th:hidden="${receivingActive}">
+            <label for="receive-expiration">Allow guest uploads for</label>
+            <select id="receive-expiration">
+                <option value="15m">15 minutes</option>
+                <option value="1h" selected>1 hour</option>
+                <option value="24h">24 hours</option>
+            </select>
+            <button id="start-receiving" type="button">Create guest upload link</button>
+        </div>
+        <p id="receive-status"
+           aria-live="polite"
+           th:text="${receivingActive} ? 'Guest uploads are active.' : 'Guest uploads are off.'">
+            Guest uploads are off.
+        </p>
+    </section>
+    <section id="receive-result" th:hidden="${!receivingActive}">
+        <h2>Guest upload link</h2>
+        <img id="receive-qr" alt="QR code for guest uploads only">
+        <p>Have your guest open this link in a browser or scan the code on the same local network.</p>
+        <p id="receive-expiration-label" th:text="${receivingExpirationLabel}"></p>
+        <p><a id="receive-url" target="_blank" rel="noopener" th:href="${senderUrl}" th:text="${senderUrl}"></a></p>
+        <button id="copy-receive-link" type="button">Copy guest upload link</button>
+        <button id="stop-receiving" type="button">Stop guest uploads</button>
+    </section>
+</details>
+
+<div id="copy-notification" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script src="/js/upload-batch.js"></script>
+<script src="/js/live-status.js"></script>
+<script src="/js/transfer-modes.js"></script>
 <script>
     const uploadForm = document.getElementById("upload-form");
     const fileInput = document.getElementById("file");
@@ -305,12 +395,21 @@
     const dropZone = document.getElementById("drop-zone");
     const uploadQueue = document.getElementById("upload-queue");
     const uploadStatus = document.getElementById("upload-status");
+    const retryFailedButton = document.getElementById("retry-failed");
+    const retryNote = document.getElementById("retry-note");
     const expirationSelect = document.getElementById("expiration");
     const filesList = document.getElementById("files-list");
     const emptyMessage = document.getElementById("empty-message");
     const storageStatus = document.getElementById("storage-status");
-    const shareBaseUrl = document.body.dataset.shareBaseUrl
-            || window.location.origin;
+    let shareBaseUrl = null;
+    const connectionStatus = document.getElementById("connection-status");
+    const connectionHelp = document.getElementById("connection-help");
+    const ownerUnlock = document.getElementById("owner-unlock");
+    const ownerAddress = document.getElementById("owner-address");
+    const ownerQr = document.getElementById("owner-qr");
+    const copyOwnerButton = document.getElementById("copy-owner-link");
+    const networkStatus = document.getElementById("network-status");
+    const shareNetworkStatus = document.getElementById("share-network-status");
     const shareResult = document.getElementById("share-result");
     const shareQr = document.getElementById("share-qr");
     const shareUrl = document.getElementById("share-url");
@@ -345,12 +444,19 @@
             document.getElementById("delete-selected");
     const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024 * 1024;
 
-    let selectedFiles = [];
+    let uploadBatch = null;
     let lastShareUrl = "";
+    let lastSharePath = "";
     let lastShareTokens = new Set();
     let fileActionInProgress = false;
     let downloadRequestCount = 0;
     let lastReceiveUrl = receiveTools.dataset.senderUrl || "";
+    let receivingActive = receiveTools.dataset.active === "true";
+    let receivingPath = lastReceiveUrl ? new URL(lastReceiveUrl).pathname : "";
+    let receiveActionInProgress = false;
+    let receiveMutationFinishedAt = 0;
+    let receiveExpiryTimer;
+    let connectionState = "checking";
     let uploadInProgress = false;
     let notificationTimer;
     let uploadedNotificationTimer;
@@ -361,8 +467,139 @@
     let fileSyncInProgress = false;
     let fileEvents;
 
+    const connection = new QuickDropConnection({
+        url: "/api/status",
+        onStatus: applyLiveStatus,
+        onConnection: showConnectionState
+    });
+
+    function showConnectionState(state) {
+        connectionState = state;
+        const labels = {
+            checking: "Checking connection...",
+            connected: "Connected to Quick Drop",
+            reconnecting: "Reconnecting to Quick Drop...",
+            unavailable: "Quick Drop server unavailable — retrying automatically.",
+            locked: "Owner dashboard locked — enter your PIN to reconnect."
+        };
+        connectionStatus.textContent = labels[state];
+        connectionStatus.dataset.state = state;
+        connectionHelp.hidden = !["reconnecting", "unavailable"].includes(state);
+        connectionHelp.textContent = "Keep Quick Drop running on the host computer. "
+                + "If the Wi-Fi changed, open localhost:"
+                + (window.location.port || "8080") + " on that computer "
+                + "and open its updated address or QR code on your other device.";
+        ownerUnlock.hidden = state !== "locked";
+        updateConnectionTools();
+        if (state === "connected") scheduleAvailableFilesSync();
+    }
+
+    function setQrUrl(image, url) {
+        const source = "/qr?text=" + encodeURIComponent(url);
+        if (image.getAttribute("src") !== source
+                || (image.complete && image.naturalWidth === 0)) image.src = source;
+    }
+
+    function updateConnectionTools() {
+        const connected = connectionState === "connected";
+        const shareable = connected && Boolean(shareBaseUrl);
+        ownerAddress.hidden = !shareable;
+        ownerQr.hidden = !shareable;
+        copyOwnerButton.disabled = !shareable;
+        if (shareBaseUrl) {
+            ownerAddress.href = shareBaseUrl;
+            ownerAddress.textContent = shareBaseUrl;
+            if (shareable) setQrUrl(ownerQr, shareBaseUrl);
+        } else {
+            ownerAddress.removeAttribute("href");
+            ownerAddress.textContent = "";
+            ownerQr.removeAttribute("src");
+        }
+        networkStatus.hidden = shareable;
+        networkStatus.textContent = connected
+                ? "No local network address is available. Connect the host computer to your local network."
+                : "The device link will update when Quick Drop reconnects.";
+
+        lastReceiveUrl = receivingActive && receivingPath && shareBaseUrl
+                ? new URL(receivingPath, shareBaseUrl + "/").href : "";
+        receiveResult.hidden = !receivingActive;
+        receiveStartControls.hidden = receivingActive;
+        receiveQr.hidden = !shareable;
+        receiveUrl.hidden = !shareable;
+        copyReceiveButton.disabled = !shareable || !receivingActive || receiveActionInProgress;
+        startReceivingButton.disabled = !shareable || receiveActionInProgress;
+        stopReceivingButton.disabled = !connected || receiveActionInProgress;
+        if (lastReceiveUrl) {
+            receiveUrl.href = lastReceiveUrl;
+            receiveUrl.textContent = lastReceiveUrl;
+            if (shareable) setQrUrl(receiveQr, lastReceiveUrl);
+        } else {
+            receiveUrl.removeAttribute("href");
+            receiveUrl.textContent = "";
+            receiveQr.removeAttribute("src");
+        }
+
+        if (lastSharePath && shareBaseUrl) {
+            lastShareUrl = new URL(lastSharePath, shareBaseUrl + "/").href;
+            shareUrl.href = lastShareUrl;
+            shareUrl.textContent = lastShareUrl;
+            if (shareable) setQrUrl(shareQr, lastShareUrl);
+        }
+        shareUrl.hidden = !shareable;
+        shareQr.hidden = !shareable;
+        shareNetworkStatus.hidden = shareable;
+        shareNetworkStatus.textContent = connected
+                ? "Connect the host computer to your local network to share this link."
+                : "Reconnect to Quick Drop to use this link.";
+        copyAgainButton.disabled = !shareable;
+        updateFileControls();
+    }
+
+    function applyLiveStatus(snapshot, {startedAt, elapsedMs}) {
+        const previousAddress = shareBaseUrl;
+        shareBaseUrl = snapshot.shareBaseUrl;
+        if (!receiveActionInProgress && startedAt >= receiveMutationFinishedAt) {
+            clearTimeout(receiveExpiryTimer);
+            const wasActive = receivingActive;
+            receivingActive = snapshot.receiving.active;
+            receivingPath = snapshot.receiving.receivePath || "";
+            receiveExpirationLabel.textContent = snapshot.receiving.expirationLabel || "";
+            receiveStatus.textContent = receivingActive ? "Guest uploads are active."
+                    : wasActive ? "Guest upload session ended." : "Guest uploads are off.";
+            if (receivingActive) {
+                const remaining = Math.max(0, Date.parse(snapshot.receiving.expiresAt)
+                        - Date.parse(snapshot.serverTime) - elapsedMs);
+                receiveExpiryTimer = setTimeout(() => {
+                    receivingActive = false;
+                    receivingPath = "";
+                    receiveStatus.textContent = "Guest upload session expired.";
+                    updateConnectionTools();
+                    connection.refresh();
+                }, remaining);
+            }
+        }
+        updateConnectionTools();
+        if (previousAddress && shareBaseUrl && previousAddress !== shareBaseUrl) {
+            showNotification("Network changed. Links and QR codes updated.", 5000);
+        }
+    }
+
+    async function copyOwnerLink() {
+        if (connectionState !== "connected" || !shareBaseUrl) return;
+        try {
+            await copyText(shareBaseUrl);
+            showNotification("Device link copied.");
+        } catch (error) {
+            showNotification("Device link could not be copied. You can scan the QR code instead.", 5000);
+        }
+    }
+
     if ("EventSource" in window) {
         fileEvents = new EventSource("/events/files");
+        fileEvents.addEventListener("connected", () => {
+            scheduleAvailableFilesSync();
+            connection.refresh();
+        });
         fileEvents.addEventListener(
                 "files-changed",
                 scheduleAvailableFilesSync
@@ -380,30 +617,33 @@
     window.setInterval(scheduleAvailableFilesSync, 30000);
 
     browseFilesButton.addEventListener("click", () => fileInput.click());
-
-    if (lastReceiveUrl) {
-        receiveQr.src = "/qr?text="
-                + encodeURIComponent(lastReceiveUrl);
-    }
+    retryFailedButton.addEventListener("click", () => startUploads([], true));
 
     startReceivingButton.addEventListener("click", startReceiving);
+    copyOwnerButton.addEventListener("click", copyOwnerLink);
 
     copyReceiveButton.addEventListener("click", async () => {
-        if (lastReceiveUrl) {
-            await copyText(lastReceiveUrl);
-            receiveStatus.textContent = "Sender link copied.";
-            showNotification("Sender link copied!");
+        if (lastReceiveUrl && connectionState === "connected") {
+            try {
+                await copyText(lastReceiveUrl);
+                receiveStatus.textContent = "Guest upload link copied.";
+                showNotification("Guest upload link copied!");
+            } catch (error) {
+                showNotification("Guest link could not be copied. You can scan its QR code instead.", 5000);
+            }
         }
     });
 
     stopReceivingButton.addEventListener("click", async () => {
-        if (!lastReceiveUrl || !window.confirm(
-                "Stop receiving files and disable this sender link?"
+        if (!receivingActive || receiveActionInProgress || !window.confirm(
+                "Stop guest uploads and disable this guest link? Your own devices will stay connected."
         )) {
             return;
         }
 
-        stopReceivingButton.disabled = true;
+        receiveActionInProgress = true;
+        clearTimeout(receiveExpiryTimer);
+        updateConnectionTools();
 
         try {
             const response = await fetch("/receive-links", {
@@ -416,23 +656,28 @@
                 return;
             }
 
-            receiveResult.hidden = true;
-            receiveStartControls.hidden = false;
-            lastReceiveUrl = "";
-            receiveStatus.textContent = result.message;
-            showNotification("Receiving stopped.");
+            receivingActive = false;
+            receivingPath = "";
+            receiveStatus.textContent = "Guest uploads stopped.";
+            showNotification("Guest uploads stopped.");
         } catch (error) {
             receiveStatus.textContent =
-                    "The receive link could not be stopped because the "
+                    "Guest uploads could not be stopped because the "
                     + "server could not be reached.";
         } finally {
-            stopReceivingButton.disabled = false;
+            receiveMutationFinishedAt = Date.now();
+            receiveActionInProgress = false;
+            updateConnectionTools();
+            connection.refresh();
         }
     });
 
     async function startReceiving() {
-        startReceivingButton.disabled = true;
-        receiveStatus.textContent = "Starting receiving...";
+        if (receiveActionInProgress || connectionState !== "connected" || !shareBaseUrl) return;
+        receiveActionInProgress = true;
+        clearTimeout(receiveExpiryTimer);
+        updateConnectionTools();
+        receiveStatus.textContent = "Creating guest upload link...";
 
         try {
             const response = await fetch("/receive-links", {
@@ -449,31 +694,33 @@
                 return;
             }
 
-            lastReceiveUrl = new URL(
-                    result.receivePath,
-                    shareBaseUrl + "/"
-            ).href;
-            receiveUrl.href = lastReceiveUrl;
-            receiveUrl.textContent = lastReceiveUrl;
-            receiveQr.src = "/qr?text="
-                    + encodeURIComponent(lastReceiveUrl);
+            receivingActive = true;
+            receivingPath = result.receivePath;
             receiveExpirationLabel.textContent = result.expirationLabel;
-            receiveResult.hidden = false;
-            receiveStartControls.hidden = true;
-            await copyText(lastReceiveUrl);
+            updateConnectionTools();
             receiveStatus.textContent =
-                    "Receiving started. Sender link copied.";
-            showNotification("Receiving started. Sender link copied!");
+                    "Guest uploads started.";
+            showNotification("Guest uploads started.");
+            if (lastReceiveUrl && connectionState === "connected") {
+                try {
+                    await copyText(lastReceiveUrl);
+                } catch (error) {
+                    receiveStatus.textContent = "Guest uploads started. Link could not be copied; scan the guest QR code instead.";
+                }
+            }
             receiveResult.scrollIntoView({
                 behavior: "smooth",
                 block: "nearest"
             });
         } catch (error) {
             receiveStatus.textContent =
-                    "Receiving could not be started because the "
+                    "Guest uploads could not be started because the "
                     + "server could not be reached.";
         } finally {
-            startReceivingButton.disabled = false;
+            receiveMutationFinishedAt = Date.now();
+            receiveActionInProgress = false;
+            updateConnectionTools();
+            connection.refresh();
         }
     }
 
@@ -524,86 +771,105 @@
         event.preventDefault();
     });
 
-    async function startUploads(files) {
+    async function startUploads(files, retry = false) {
         if (uploadInProgress) {
             uploadStatus.textContent =
                     "Wait for the current uploads to finish.";
             return;
         }
 
-        setSelectedFiles(files);
+        if (!retry) {
+            if (files.length === 0) {
+                return;
+            }
+            if (uploadBatch?.retryableEntries().length && !window.confirm(
+                    "Starting a new batch replaces the previous results "
+                    + "and pending retries. Continue?"
+            )) {
+                fileInput.value = "";
+                return;
+            }
+            uploadBatch = new UploadBatch(files, {
+                expiration: expirationSelect.value
+            });
+        }
+
+        const attempts = retry ? uploadBatch?.retryableEntries() || []
+                : uploadBatch.entries;
+        if (attempts.length === 0) {
+            return;
+        }
+
         uploadInProgress = true;
         browseFilesButton.disabled = true;
         expirationSelect.disabled = true;
-
-        let uploadedCount = 0;
-        const uploadIssues = [];
+        retryFailedButton.disabled = true;
+        retryFailedButton.hidden = true;
+        retryNote.hidden = true;
+        setSelectedFiles(attempts.map(entry => entry.file));
         const row = getUploadRow();
 
-        for (let index = 0; index < selectedFiles.length; index++) {
-            const file = selectedFiles[index];
-            prepareUploadRow(row, file);
-            uploadStatus.textContent = "Uploading " + (index + 1)
-                    + " of " + selectedFiles.length + ": " + file.name;
+        try {
+            for (let index = 0; index < attempts.length; index++) {
+                const entry = attempts[index];
+                const file = entry.file;
+                prepareUploadRow(row, file);
+                uploadStatus.textContent = (retry ? "Retrying " : "Uploading ")
+                        + (index + 1) + " of " + attempts.length + ": " + file.name;
 
-            if (file.size > MAX_FILE_SIZE_BYTES) {
-                const message = "Too large — 3 GB maximum";
-                setRowStatus(row, message);
-                uploadIssues.push({filename: file.name, message});
-                continue;
-            }
+                if (file.size === 0 || file.size > MAX_FILE_SIZE_BYTES) {
+                    uploadBatch.finish(entry, {
+                        success: false,
+                        retryable: false,
+                        message: file.size === 0
+                                ? "Empty file — choose a file with content."
+                                : "Too large — 3 GB maximum. Choose a smaller file."
+                    });
+                    continue;
+                }
 
-            const existingFile = findFileLink(file.name);
-            let overwrite = Boolean(existingFile);
+                try {
+                    const overwrite = Boolean(findFileLink(file.name));
+                    if (overwrite && !window.confirm(
+                            "A file named " + file.name
+                            + " already exists. Replace it?"
+                    )) {
+                        uploadBatch.finish(entry, {skipped: true, message: "Skipped — not replaced."});
+                        continue;
+                    }
 
-            if (existingFile && !window.confirm(
-                    "A file named " + file.name
-                    + " already exists. Replace it?"
-            )) {
-                setRowStatus(row, "Skipped");
-                uploadIssues.push({
-                    filename: file.name,
-                    message: "Skipped"
-                });
-                continue;
-            }
-
-            let outcome = await sendUpload(file, overwrite, row);
-
-            if (outcome.requiresOverwrite) {
-                if (window.confirm(outcome.message + " Replace it?")) {
-                    outcome = await sendUpload(file, true, row);
-                } else {
-                    setRowStatus(row, "Skipped");
-                    outcome = {success: false, message: "Skipped"};
+                    let outcome = await sendUpload(file, overwrite, row,
+                            uploadBatch.options.expiration);
+                    if (outcome.requiresOverwrite) {
+                        outcome = window.confirm(outcome.message + " Replace it?")
+                                ? await sendUpload(file, true, row, uploadBatch.options.expiration)
+                                : {skipped: true, message: "Skipped — not replaced."};
+                    }
+                    uploadBatch.finish(entry, outcome);
+                } catch (error) {
+                    uploadBatch.finish(entry, {
+                        success: false,
+                        retryable: true,
+                        message: "Upload interrupted. Check whether the file arrived before retrying."
+                    });
                 }
             }
-
-            if (outcome.success) {
-                uploadedCount++;
-            } else {
-                uploadIssues.push({
-                    filename: file.name,
-                    message: outcome.message ?? "Upload failed"
-                });
-            }
+        } finally {
+            finishUploadProgress(row, uploadBatch);
+            uploadStatus.textContent = uploadBatch.summary();
+            const retryCount = uploadBatch.retryableEntries().length;
+            retryFailedButton.textContent = "Retry failed (" + retryCount + ")";
+            retryFailedButton.hidden = retryCount === 0;
+            retryFailedButton.disabled = false;
+            retryNote.hidden = retryCount === 0;
+            fileInput.value = "";
+            browseFilesButton.disabled = false;
+            expirationSelect.disabled = false;
+            uploadInProgress = false;
         }
-
-        const summary = uploadedCount + " of " + selectedFiles.length
-                + (selectedFiles.length === 1
-                        ? " file uploaded."
-                        : " files uploaded.");
-        finishUploadProgress(row, summary, uploadIssues);
-        uploadStatus.textContent = summary;
-        selectedFiles = [];
-        fileInput.value = "";
-        browseFilesButton.disabled = false;
-        expirationSelect.disabled = false;
-        uploadInProgress = false;
     }
 
     function setSelectedFiles(files) {
-        selectedFiles = files;
         uploadQueue.replaceChildren();
 
         if (files.length > 0) {
@@ -642,12 +908,13 @@
         setRowStatus(row, formatFileSize(file.size) + " — Ready");
     }
 
-    function finishUploadProgress(row, summary, issues) {
+    function finishUploadProgress(row, batch) {
         row.querySelector(".upload-item-name").textContent =
-                "Upload finished";
-        row.querySelector("progress").value = 100;
-        setRowStatus(row, "Complete");
+                batch.hasFailures() ? "Upload needs attention" : "Upload finished";
+        row.querySelector("progress").hidden = true;
+        row.querySelector(".upload-item-status").hidden = true;
 
+        const issues = batch.issues();
         if (issues.length === 0) {
             return;
         }
@@ -668,11 +935,11 @@
         row.querySelector(".upload-item-status").textContent = message;
     }
 
-    function sendUpload(file, overwrite, row) {
+    function sendUpload(file, overwrite, row, expiration) {
         return new Promise(resolve => {
             const formData = new FormData();
             formData.append("file", file);
-            formData.append("expiration", expirationSelect.value);
+            formData.append("expiration", expiration);
             formData.append("overwrite", overwrite);
 
             const request = new XMLHttpRequest();
@@ -690,13 +957,20 @@
                 );
 
                 row.querySelector("progress").value = percentage;
-                setRowStatus(row, "Uploading — " + percentage + "%");
+                setRowStatus(row, percentage === 100
+                        ? "Upload sent — waiting for the server..."
+                        : "Uploading — " + percentage + "%");
             });
 
             request.addEventListener("load", () => {
                 const response = request.response;
 
                 if (request.status >= 200 && request.status < 300) {
+                    if (!response?.filename || !response?.shareToken) {
+                        resolve({success: false, retryable: true,
+                            message: "Could not confirm the upload. Check whether the file arrived before retrying."});
+                        return;
+                    }
                     row.querySelector("progress").value = 100;
                     setRowStatus(row, "Uploaded");
                     storageStatus.textContent = response.storageLabel;
@@ -715,15 +989,24 @@
                 setRowStatus(row, message);
                 resolve({
                     success: false,
+                    retryable: ![400, 410, 413].includes(request.status),
                     requiresOverwrite: response?.requiresOverwrite,
                     message
                 });
             });
 
             request.addEventListener("error", () => {
-                const message = "Server could not be reached.";
+                const message = "Connection lost. Check whether the file arrived before retrying.";
                 setRowStatus(row, message);
-                resolve({success: false, message});
+                resolve({success: false, retryable: true, message});
+            });
+
+            ["abort", "timeout"].forEach(eventName => {
+                request.addEventListener(eventName, () => resolve({
+                    success: false,
+                    retryable: true,
+                    message: "Upload interrupted. Check whether the file arrived before retrying."
+                }));
             });
 
             request.send(formData);
@@ -769,10 +1052,15 @@
     });
 
     copyAgainButton.addEventListener("click", async () => {
-        if (lastShareUrl) {
-            await copyText(lastShareUrl);
-            fileActionStatus.textContent = "Share link copied.";
-            showNotification();
+        if (lastShareUrl && shareBaseUrl && connectionState === "connected") {
+            try {
+                await copyText(lastShareUrl);
+                fileActionStatus.textContent = "Share link copied.";
+                showNotification();
+            } catch (error) {
+                fileActionStatus.textContent = "Copying was blocked; scan the QR code or copy the displayed link.";
+                showNotification("Share link could not be copied. You can scan its QR code instead.", 5000);
+            }
         }
     });
 
@@ -861,7 +1149,7 @@
         emptyMessage.hidden = choices.length !== 0;
         selectionStatus.textContent = selectedCount + " selected";
         shareSelectedButton.disabled = fileActionInProgress
-                || selectedCount === 0;
+                || selectedCount === 0 || connectionState !== "connected" || !shareBaseUrl;
         downloadSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
         deleteSelectedButton.disabled = fileActionInProgress
@@ -934,7 +1222,8 @@
     }
 
     async function createShareLink(choices) {
-        if (fileActionInProgress || choices.length === 0) {
+        if (fileActionInProgress || choices.length === 0
+                || connectionState !== "connected" || !shareBaseUrl) {
             return;
         }
 
@@ -965,8 +1254,11 @@
                 sharedFileCount = result.fileCount;
             }
 
+            if (!shareBaseUrl || connectionState !== "connected") {
+                fileActionStatus.textContent = "Reconnect to Quick Drop, then create the share link again.";
+                return;
+            }
             const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
-            await copyText(shareLink);
             const availableTokens = new Set(
                     getFileChoices().map(choice => choice.value)
             );
@@ -982,6 +1274,13 @@
             shareFilesLabel.textContent = filenames.length === 1
                     ? "File: " + filenames[0]
                     : "Link for " + sharedFileCount + " selected files.";
+            try {
+                await copyText(shareLink);
+            } catch (error) {
+                fileActionStatus.textContent = "Share link created. Copying was blocked; scan the QR code or copy the displayed link.";
+                showNotification("Share link created. Scan the QR code to use it.", 5000);
+                return;
+            }
             showNotification(
                     sharedFileCount === 1
                             ? "Share link created and copied!"
@@ -1011,13 +1310,19 @@
             temporaryInput.style.position = "fixed";
             temporaryInput.style.opacity = "0";
             document.body.appendChild(temporaryInput);
-            temporaryInput.select();
-            document.execCommand("copy");
-            temporaryInput.remove();
+            try {
+                temporaryInput.select();
+                if (!document.execCommand("copy")) {
+                    throw new Error("Clipboard copy failed");
+                }
+            } finally {
+                temporaryInput.remove();
+            }
         }
     }
 
     function showShareResult(url, fileCount) {
+        lastSharePath = new URL(url).pathname;
         lastShareUrl = url;
         shareUrl.href = url;
         shareUrl.textContent = url;
@@ -1026,6 +1331,7 @@
                 ? "QR code for one shared file"
                 : "QR code for " + fileCount + " shared files";
         shareResult.hidden = false;
+        updateConnectionTools();
         shareResult.scrollIntoView({behavior: "smooth", block: "nearest"});
     }
 
@@ -1215,11 +1521,28 @@
         if (lastShareTokens.has(token)) {
             shareResult.hidden = true;
             lastShareUrl = "";
+            lastSharePath = "";
             lastShareTokens.clear();
         }
     }
 
+    const transferModes = new QuickDropModes({
+        sendButton: document.getElementById("send-mode-button"),
+        receiveButton: document.getElementById("receive-mode-button"),
+        sendPanel: document.getElementById("send-panel"),
+        receivePanel: document.getElementById("receive-panel"),
+        onReceive: scheduleAvailableFilesSync
+    });
+    transferModes.start();
     updateFileControls();
+    connection.start();
+    window.addEventListener("pagehide", () => {
+        connection.stop();
+        clearTimeout(receiveExpiryTimer);
+    });
+    window.addEventListener("pageshow", event => {
+        if (event.persisted) connection.start();
+    });
 </script>
 </body>
 </html>
