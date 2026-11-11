@@ -162,6 +162,12 @@ owner authentication, for their listed HTTP methods. Guest links still enforce t
 token checks, setup remains localhost-only, and mutations still require CSRF verification.
 When adding a public page or asset, review and update that allowlist explicitly.
 
+Live file notifications recheck the subscribing session and PIN version before each
+event. Logout, session expiry, or a changed PIN closes the stream before sending
+another filename. A heartbeat checks idle streams every 15 seconds. Streams also
+expire after five minutes; the browser reconnects through normal owner authentication.
+Localhost streams retain the same local-owner access as the dashboard.
+
 Uploads are admitted before multipart parsing: owner authentication, CSRF verification,
 and an active receiving link are required where applicable. The retired sender route
 and multipart bodies sent to other routes are rejected. Uploads allow at most two

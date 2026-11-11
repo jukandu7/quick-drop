@@ -123,8 +123,9 @@ public class HomeController {
 
     @GetMapping(value = "/events/files",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter fileEvents() {
-        return fileEventService.subscribe();
+    public SseEmitter fileEvents(HttpServletRequest request, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
+        return fileEventService.subscribe(ownerAccessService.liveAccess(request));
     }
 
     @GetMapping("/api/files")
