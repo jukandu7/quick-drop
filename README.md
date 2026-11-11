@@ -50,6 +50,8 @@ Run only one instance against the local database at a time. Stop a terminal inst
 
 ## Using Quick Drop
 
+Quick Drop stores uploaded copies on the computer running the app, not on every connected device. Uploading leaves the original on the sending device. Downloading saves a copy on the device using the browser. The delete-after setting applies to the stored copy; it does not remove originals or previously downloaded copies.
+
 The default run configuration uses **unencrypted HTTP** for trusted local networks. To protect PINs, session cookies, and files in transit, use the HTTPS configuration below.
 
 1. On the host computer, visit [Owner PIN setup](http://localhost:8080/owner/setup) and choose a four-digit PIN. Access through localhost already has owner permissions.

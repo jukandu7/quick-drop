@@ -25,7 +25,7 @@
 <div th:replace="~{fragments/transport :: notice}"></div>
 <div class="dashboard-intro">
 <div><p class="eyebrow">YOUR LOCAL FILE SPACE</p><h1>Files, from here to there.</h1>
-<p class="intro-description">Send a file. Pick it up on another device. Keep it simple.</p></div>
+<p class="intro-description">Files are stored on the computer running Quick Drop. Open Quick Drop on another device to download them.</p></div>
 <div class="connection-summary">
 <p id="connection-status" role="status" aria-live="polite">Checking connection...</p>
 <p id="connection-help" hidden></p>
@@ -38,7 +38,7 @@
 <div class="transfer-workspace">
 <section id="add-files-panel" aria-labelledby="add-files-heading">
 <h2 id="add-files-heading">Add files</h2>
-<p class="section-description">Choose or drop files below. They’ll appear in Your files.</p>
+<p class="section-description">Upload a copy from this device to the computer running Quick Drop. Your original files stay on this device.</p>
 
 <form id="upload-form"
       action="/upload"
@@ -55,7 +55,7 @@
         <input id="file" type="file" name="file" multiple hidden>
     </div>
 
-    <div class="expiration-control"><label for="expiration">Automatically delete after</label>
+    <div class="expiration-control"><label for="expiration">Delete the stored copy after</label>
     <select id="expiration" name="expiration">
         <option value="1h">1 hour</option>
         <option value="24h" selected>24 hours</option>
@@ -80,7 +80,7 @@
 <section id="your-files-panel" aria-labelledby="your-files-heading">
 <h2 id="your-files-heading">Your files</h2>
 <p>
-    Available files update automatically, including uploads from this device.
+    These files are stored on the computer running Quick Drop.
     Select files and download them to save a copy on this device.
 </p>
 
@@ -117,7 +117,7 @@
 <p id="file-action-status" aria-live="polite"></p>
 
 <p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
-    No files here yet. Send files from any connected device and they’ll appear here.
+    No files stored yet. Add files above or from another connected device; they’ll appear here automatically.
 </p>
 
 <ul id="files-list" aria-label="Available files">
