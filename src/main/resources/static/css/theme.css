@@ -466,3 +466,23 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
     #receive-browse-files { width: 100%; }
     #receive-drop-zone { padding: 24px 14px; }
 }
+
+/* Upload feedback uses text and color together; 100% sent is not completion. */
+.upload-item[data-state], .receive-upload-item[data-state] { border-left-width: 3px; }
+.upload-item[data-state="sending"], .receive-upload-item[data-state="sending"] { border-left-color: #9ac4ff; }
+.upload-item[data-state="saving"], .receive-upload-item[data-state="saving"] { border-left-color: #e9c574; }
+.upload-item[data-state="complete"], .receive-upload-item[data-state="complete"] { border-left-color: #83d6a5; }
+.upload-item[data-state="attention"], .receive-upload-item[data-state="attention"] { border-left-color: #ffaaa3; }
+.upload-item[data-state="skipped"], .receive-upload-item[data-state="skipped"] { border-left-color: #e9c574; }
+.upload-item small, .receive-upload-item small { color: var(--muted); font-size: 0.8rem; }
+.transfer-results { margin-top: 12px; border: 1px solid #334154; border-radius: 10px; background: #121a25; }
+.transfer-results summary { padding: 14px 16px; cursor: pointer; font-size: 0.85rem; color: var(--accent); }
+.transfer-results ul { list-style: none; margin: 0; padding: 0 16px 8px; }
+.transfer-results li { border-top: 1px solid #303a4a; padding: 12px 0; overflow-wrap: anywhere; }
+.transfer-results li strong, .transfer-results li span { display: block; }
+.transfer-results li strong { font-size: 0.85rem; font-weight: 550; }
+.transfer-results li span { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+.transfer-results li[data-state="failed"] span { color: #ffb6ae; }
+.transfer-results li[data-state="uploaded"] span { color: #a0dfb8; }
+.transfer-results li[data-state="skipped"] span { color: #e9c574; }
+#retry-failed, #receive-retry-failed { margin-top: 12px; min-height: 44px; }

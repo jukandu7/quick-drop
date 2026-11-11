@@ -131,32 +131,11 @@
     }
 
     function prepareUploadRow(row, file) {
-        row.querySelector(".upload-item-name").textContent = file.name;
-        row.querySelector("progress").value = 0;
-        setRowStatus(row, formatFileSize(file.size) + " — Ready");
+        UploadFeedback.prepare(row, file, formatFileSize(file.size));
     }
 
     function finishUploadProgress(row, batch) {
-        row.querySelector(".upload-item-name").textContent =
-                batch.hasFailures() ? "Upload needs attention" : "Upload finished";
-        row.querySelector("progress").hidden = true;
-        row.querySelector(".upload-item-status").hidden = true;
-
-        const issues = batch.issues();
-        if (issues.length === 0) {
-            return;
-        }
-
-        const issueList = document.createElement("ul");
-        issueList.className = "upload-issues";
-
-        issues.forEach(issue => {
-            const item = document.createElement("li");
-            item.textContent = issue.filename + " — " + issue.message;
-            issueList.appendChild(item);
-        });
-
-        uploadQueue.appendChild(issueList);
+        UploadFeedback.finish(row, batch, uploadQueue);
     }
 
     function setRowStatus(row, message) {
@@ -176,19 +155,8 @@
             request.responseType = "json";
             setRowStatus(row, "Uploading — 0%");
 
-            request.upload.addEventListener("progress", progressEvent => {
-                if (!progressEvent.lengthComputable) {
-                    return;
-                }
-
-                const percentage = Math.round(
-                        progressEvent.loaded / progressEvent.total * 100
-                );
-
-                row.querySelector("progress").value = percentage;
-                setRowStatus(row, percentage === 100
-                        ? "Upload sent — waiting for the server..."
-                        : "Uploading — " + percentage + "%");
+            request.upload.addEventListener("progress", event => {
+                UploadFeedback.progress(row, event);
             });
 
             request.addEventListener("load", () => {
