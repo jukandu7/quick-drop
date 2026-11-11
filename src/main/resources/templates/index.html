@@ -36,15 +36,9 @@
    th:if="${pinNotice}" th:text="${pinNotice}"></p>
 <main id="main-content" class="dashboard-grid" tabindex="-1">
 <div class="transfer-workspace">
-<div id="mode-switch" role="group" aria-label="Transfer mode">
-    <button id="send-mode-button" type="button" aria-pressed="true" aria-controls="send-panel">Send files</button>
-    <button id="receive-mode-button" type="button" aria-pressed="false" aria-controls="receive-panel">Receive files</button>
-</div>
-<p class="mode-hint">Uploads keep running when you switch views.</p>
-
-<section id="send-panel" aria-labelledby="send-heading">
-<h2 id="send-heading">Make room for your next transfer.</h2>
-<p class="section-description">Add files here, then open Receive files on your other device.</p>
+<section id="add-files-panel" aria-labelledby="add-files-heading">
+<h2 id="add-files-heading">Add files</h2>
+<p class="section-description">Choose or drop files below. They’ll appear in Your files.</p>
 
 <form id="upload-form"
       action="/upload"
@@ -83,8 +77,8 @@
 </p>
 </div>
 
-<section id="receive-panel" aria-labelledby="receive-heading" hidden>
-<h2 id="receive-heading">Receive files</h2>
+<section id="your-files-panel" aria-labelledby="your-files-heading">
+<h2 id="your-files-heading">Your files</h2>
 <p>
     Available files update automatically, including uploads from this device.
     Select files and download them to save a copy on this device.
@@ -168,7 +162,7 @@
     <ol>
         <li>Connect it to the same local network (Wi-Fi, Ethernet, or hotspot).</li>
         <li>Open a browser and type or paste the address below into its address bar.</li>
-        <li>Enter your four-digit owner PIN, then choose Send files or Receive files.</li>
+        <li>Enter your four-digit owner PIN, then add files or download them from Your files.</li>
     </ol>
     <p><a id="owner-address" th:href="${shareBaseUrl}" th:text="${shareBaseUrl}" hidden></a></p>
     <button id="copy-owner-link" type="button" disabled>Copy address</button>
@@ -229,7 +223,6 @@
 
 <script src="/js/upload-batch.js"></script>
 <script src="/js/live-status.js"></script>
-<script src="/js/transfer-modes.js"></script>
 <script src="/js/dashboard-network.js"></script>
 <script src="/js/dashboard-uploads.js"></script>
 <script src="/js/dashboard-files.js"></script>

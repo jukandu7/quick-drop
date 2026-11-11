@@ -32,23 +32,8 @@ h2 { font-size: 1.5rem; }
     text-align: center;
 }
 
-#mode-switch {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
 
-#mode-switch button {
-    padding: 0.65rem 1rem;
-    border: 2px solid var(--border);
-    border-radius: 0.5rem;
-    cursor: pointer;
-}
 
-#mode-switch button[aria-pressed="true"] {
-    font-weight: 700;
-}
 
 #owner-address {
     display: block;
@@ -293,8 +278,7 @@ input::placeholder, textarea::placeholder { color: #a6b4c6; }
 }
 
 #drop-zone.drag-over,
-#receive-drop-zone.drag-over,
-#mode-switch button[aria-pressed="true"] {
+#receive-drop-zone.drag-over {
     background: var(--highlight);
     border-color: var(--accent);
 }
@@ -346,12 +330,8 @@ body.dashboard-page { margin: 0; background: #10141b; }
 #connection-help { color: var(--muted); }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
 .transfer-workspace { min-width: 0; background: #171e28; border: 1px solid #303a4a; border-radius: 18px; padding: 26px; }
-.dashboard-page #mode-switch { margin: 0; display: grid; grid-template-columns: 1fr 1fr; padding: 5px; gap: 5px; border-radius: 12px; background: #10161f; }
-.dashboard-page #mode-switch button { border: 0; background: transparent; color: var(--muted); border-radius: 8px; padding: 11px; font-size: 0.9rem; }
-.dashboard-page #mode-switch button[aria-pressed="true"] { background: #2b3d56; color: #e0edff; box-shadow: 0 2px 5px #0003; }
-.mode-hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin: 12px 0 30px; }
 .dashboard-page h2 { font-size: 1.15rem; letter-spacing: -0.02em; margin: 0 0 10px; }
-.section-description, #receive-panel > p { color: var(--muted); font-size: 0.875rem; }
+.section-description, #your-files-panel > p { color: var(--muted); font-size: 0.875rem; }
 .dashboard-page button { min-height: 42px; padding: 9px 15px; font-size: 0.85rem; font-weight: 550; border-radius: 8px; transition: background 120ms ease, border-color 120ms ease; }
 .dashboard-page select { padding: 9px 30px 9px 12px; min-height: 42px; font-size: 0.85rem; border-radius: 8px; }
 .dashboard-page #drop-zone { max-width: none; border: 1px dashed #526782; background: #121a26; padding: 34px 18px; border-radius: 12px; margin: 24px 0; }
@@ -537,8 +517,7 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 }
 @media (forced-colors: active) {
     .dashboard-page #files-list li.is-selected { outline: 2px solid Highlight; }
-    #mode-switch button[aria-pressed="true"] { outline: 2px solid Highlight; }
-}
+    }
 
 /* Separate link revocation from permanent file removal. */
 .management-action { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: #121a25; }
@@ -549,3 +528,5 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 #management-selection { font-weight: 550; }
 
 .file-details .expiration-relative { display: block; margin-top: 6px; font-size: .8rem; color: var(--text); }
+
+#your-files-panel { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--border); }

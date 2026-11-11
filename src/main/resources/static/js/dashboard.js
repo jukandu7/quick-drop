@@ -261,14 +261,7 @@
         }
     });
 
-    const transferModes = new QuickDropModes({
-        sendButton: document.getElementById("send-mode-button"),
-        receiveButton: document.getElementById("receive-mode-button"),
-        sendPanel: document.getElementById("send-panel"),
-        receivePanel: document.getElementById("receive-panel"),
-        onReceive: scheduleAvailableFilesSync
-    });
-    transferModes.start();
+    scheduleAvailableFilesSync();
     updateFileControls();
     connection.start();
     window.addEventListener("pagehide", () => {

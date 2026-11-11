@@ -28,7 +28,6 @@ for (const page of ['index', 'receive']) {
             window: {addEventListener: (event, action) => lifecycle.push([event, action]), setInterval() {}},
             setTimeout() {}, clearTimeout() {}, URL, console,
             QuickDropConnection: class { start() { started++; } stop() {} refresh() {} },
-            QuickDropModes: class { start() {} },
         });
         for (const [, attrs, inline] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
             assert.equal(inline.trim(), '', 'page behavior belongs in external files');
@@ -37,7 +36,7 @@ for (const page of ['index', 'receive']) {
             const code = fs.readFileSync(path.join(root, 'static', src), 'utf8');
             assert.doesNotThrow(() => new vm.Script(code, {filename: src}));
             // Connection and mode behavior have dedicated tests; isolate page startup from timers/network.
-            if (src === '/js/live-status.js' || src === '/js/transfer-modes.js') continue;
+            if (src === '/js/live-status.js') continue;
             vm.runInContext(code, context, {filename: src});
         }
         assert.equal(started, 1);

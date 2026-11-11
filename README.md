@@ -54,12 +54,12 @@ The default run configuration uses **unencrypted HTTP** for trusted local networ
 
 1. On the host computer, visit [Owner PIN setup](http://localhost:8080/owner/setup) and choose a four-digit PIN. Access through localhost already has owner permissions.
 2. On another device on the same network, open the address shown under **Connect another device**, or scan its QR code.
-3. Enter the owner PIN to access **Send files** and **Receive files**. Owner access includes uploading, viewing, downloading, sharing, and deleting files.
-4. Choose or drop files in **Send files** to upload automatically. Use **Receive files** to download or manage them.
+3. Enter the owner PIN to open the dashboard. Owner access includes uploading, viewing, downloading, sharing, and deleting files.
+4. Choose or drop files in **Add files** to upload automatically. Browse, download, or manage them in **Your files** directly below.
 
 For someone who only needs to send files, expand **Let someone send files (optional)** and create a guest upload link. It can last 15 minutes, one hour, or 24 hours, and you can stop guest uploads early. Guests using this link cannot browse or download your stored files.
 
-To share downloads, select files in **Receive files** and choose **Create share link**. Keep the host computer running and connected while links are in use.
+To share downloads, select files in **Your files** and choose **Create share link**. Keep the host computer running and connected while links are in use.
 
 Replacing a file invalidates its previous download link and any combined links containing that version. To invalidate links without deleting files, select the files and choose **Revoke download links**. This also revokes combined links containing those files; their contents and expiration settings are preserved. Create fresh links afterward if needed. Revocation cannot remove copies already downloaded or retract bytes from a download that has already started.
 
