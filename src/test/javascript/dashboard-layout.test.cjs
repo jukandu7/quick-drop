@@ -72,3 +72,30 @@ test('connection is available beside file transfers with a typeable address befo
     assert.match(connectionText, /(?:four|4)[- ]digit (?:owner )?PIN/i);
 });
 
+
+test('connection details start collapsed behind an accessible toggle', () => {
+    const elements = markupElements();
+    const toggle = elements.get('connect-device-toggle');
+    const panel = elements.get('connect-device');
+    assert.equal(toggle.tag, 'button');
+    assert.match(toggle.opening, /aria-expanded="false"/);
+    assert.match(toggle.opening, /aria-controls="connect-device"/);
+    assert.match(panel.opening, /\shidden(?:\s|>|=)/);
+    assert.ok(elements.get('owner-address').ancestors.includes(panel));
+    assert.ok(elements.get('copy-owner-link').ancestors.includes(panel));
+    assert.ok(elements.get('device-qr-options').ancestors.includes(panel));
+    const vm = require('node:vm');
+    let click;
+    const button = {expanded: 'false', getAttribute() {return this.expanded;}, setAttribute(name, value) {this.expanded = value;}, addEventListener(event, handler) {click = handler;}};
+    const section = {hidden: true};
+    const js = fs.readFileSync(path.join(resourceRoot, 'static/js/dashboard.js'), 'utf8');
+    vm.runInNewContext(js.slice(js.indexOf('    const connectDeviceToggle'), js.indexOf('    browseFilesButton.addEventListener')), {
+        document: {getElementById: id => id === 'connect-device-toggle' ? button : section}
+    });
+    click();
+    assert.equal(section.hidden, false);
+    assert.equal(button.expanded, 'true');
+    click();
+    assert.equal(section.hidden, true);
+    assert.equal(button.expanded, 'false');
+});

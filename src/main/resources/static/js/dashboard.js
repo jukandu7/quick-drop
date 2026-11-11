@@ -112,6 +112,14 @@
     window.setInterval(scheduleAvailableFilesSync, 30000);
     window.setInterval(updateFileExpirationLabels, 30000);
 
+    const connectDeviceToggle = document.getElementById("connect-device-toggle");
+    const connectDevicePanel = document.getElementById("connect-device");
+    connectDeviceToggle.addEventListener("click", () => {
+        const expanded = connectDeviceToggle.getAttribute("aria-expanded") !== "true";
+        connectDevicePanel.hidden = !expanded;
+        connectDeviceToggle.setAttribute("aria-expanded", String(expanded));
+    });
+
     browseFilesButton.addEventListener("click", () => fileInput.click());
     retryFailedButton.addEventListener("click", () => startUploads([], true));
 

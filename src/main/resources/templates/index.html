@@ -155,10 +155,10 @@
 </section>
 </div>
 <aside class="connection-sidebar" aria-label="Connect and share">
-<section id="connect-device" aria-labelledby="connect-device-heading">
-    <h2 id="connect-device-heading">Connect another device</h2>
-    <p>Works with desktops, laptops, tablets, and phones. No app installation is needed on the connecting device.</p>
-    <p><strong>Open on another computer</strong></p>
+<button id="connect-device-toggle" type="button" aria-expanded="false" aria-controls="connect-device">Connect a device</button>
+<section id="connect-device" aria-labelledby="connect-device-heading" hidden>
+    <h2 id="connect-device-heading">Open Quick Drop on your device</h2>
+    <p>Use a browser on your other computer, tablet, or phone. No app installation needed.</p>
     <ol>
         <li>Connect it to the same local network (Wi-Fi, Ethernet, or hotspot).</li>
         <li>Open a browser and type or paste the address below into its address bar.</li>
@@ -167,7 +167,7 @@
     <p><a id="owner-address" th:href="${shareBaseUrl}" th:text="${shareBaseUrl}" hidden></a></p>
     <button id="copy-owner-link" type="button" disabled>Copy address</button>
     <p id="network-status">Checking the host computer's network address...</p>
-    <p>Copy this address to send it to your other device, or type it there. QR scanning is optional.</p>
+    <p>Prefer using your camera? Scan the optional QR code below.</p>
     <details id="device-qr-options">
         <summary>Or scan a QR code</summary>
         <img id="owner-qr" alt="QR code to connect your device to the owner dashboard" hidden>
@@ -187,7 +187,7 @@
         <p>
             Create a temporary upload-only link for someone else. Guests do not need
             your owner PIN and cannot see, download, share, or delete your stored files.
-            Use Connect another device above for two-way transfers with your own devices.
+            Use Connect a device above for two-way transfers with your own devices.
         </p>
         <div id="receive-start-controls" th:hidden="${receivingActive}">
             <label for="receive-expiration">Allow guest uploads for</label>

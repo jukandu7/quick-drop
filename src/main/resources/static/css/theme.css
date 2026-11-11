@@ -530,3 +530,8 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .file-details .expiration-relative { display: block; margin-top: 6px; font-size: .8rem; color: var(--text); }
 
 #your-files-panel { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--border); }
+
+#connect-device-toggle { width: 100%; min-height: 48px; text-align: left; background: #223249; border-color: #526782; }
+#connect-device-toggle::after { content: "+"; float: right; margin-left: 12px; }
+#connect-device-toggle[aria-expanded="true"]::after { content: "−"; }
+.dashboard-page #connect-device { margin-top: 12px; }

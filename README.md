@@ -55,7 +55,7 @@ Quick Drop stores uploaded copies on the computer running the app, not on every 
 The default run configuration uses **unencrypted HTTP** for trusted local networks. To protect PINs, session cookies, and files in transit, use the HTTPS configuration below.
 
 1. On the host computer, visit [Owner PIN setup](http://localhost:8080/owner/setup) and choose a four-digit PIN. Access through localhost already has owner permissions.
-2. On another device on the same network, open the address shown under **Connect another device**, or scan its QR code.
+2. On another device on the same network, choose **Connect a device** on the dashboard, then open the displayed address on the other device or scan the optional QR code.
 3. Enter the owner PIN to open the dashboard. Owner access includes uploading, viewing, downloading, sharing, and deleting files.
 4. Choose or drop files in **Add files** to upload automatically. Browse, download, or manage them in **Your files** directly below.
 
