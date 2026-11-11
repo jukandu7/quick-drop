@@ -9,31 +9,41 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="dashboard-page" th:attr="data-share-base-url=${shareBaseUrl}">
+<div class="dashboard-shell">
+<header class="dashboard-header">
+    <a class="brand" href="/" aria-label="Quick Drop home"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</a>
+    <nav class="dashboard-nav" aria-label="Settings">
+        <a th:if="${localOwner}" href="/owner/setup">Owner PIN</a>
+        <a href="/owner/network" target="_blank" rel="noopener">Network settings ↗</a>
+        <form th:if="${remoteOwnerSession}" action="/owner/logout" method="post">
+            <input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit">Lock dashboard</button>
+        </form>
+    </nav>
+</header>
 <div th:replace="~{fragments/transport :: notice}"></div>
-<h1>Quick Drop</h1>
-<p id="pin-notice" role="status" aria-live="polite"
-   th:if="${pinNotice}" th:text="${pinNotice}"></p>
-<p><strong>Owner dashboard</strong> — send and receive files on any connected device.</p>
+<div class="dashboard-intro">
+<div><p class="eyebrow">YOUR LOCAL FILE SPACE</p><h1>Files, from here to there.</h1>
+<p class="intro-description">Send a file. Pick it up on another device. Keep it simple.</p></div>
+<div class="connection-summary">
 <p id="connection-status" role="status" aria-live="polite">Checking connection...</p>
 <p id="connection-help" hidden></p>
 <p id="owner-unlock" hidden><a href="/owner/login">Unlock owner dashboard</a></p>
-<p th:if="${localOwner}"><a href="/owner/setup">Change owner PIN</a></p>
-<p><a href="/owner/network" target="_blank" rel="noopener">Choose network address</a></p>
-<form th:if="${remoteOwnerSession}"
-      action="/owner/logout"
-      method="post">
-    <input type="hidden" name="_csrf" th:value="${csrfToken}">
-    <button type="submit">Lock owner dashboard</button>
-</form>
+</div>
+</div>
+<p id="pin-notice" role="status" aria-live="polite"
+   th:if="${pinNotice}" th:text="${pinNotice}"></p>
+<main class="dashboard-grid">
+<div class="transfer-workspace">
 <div id="mode-switch" role="group" aria-label="Transfer mode">
     <button id="send-mode-button" type="button" aria-pressed="true" aria-controls="send-panel">Send files</button>
     <button id="receive-mode-button" type="button" aria-pressed="false" aria-controls="receive-panel">Receive files</button>
 </div>
-<p>Switch views anytime without unlocking again. Uploads keep running in either view.</p>
+<p class="mode-hint">Uploads keep running when you switch views.</p>
 
 <section id="send-panel" aria-labelledby="send-heading">
-<h2 id="send-heading">Send files</h2>
-<p>Upload files from this device. They appear in Receive files on your other connected devices.</p>
+<h2 id="send-heading">Make room for your next transfer.</h2>
+<p class="section-description">Add files here, then open Receive files on your other device.</p>
 
 <form id="upload-form"
       action="/upload"
@@ -42,20 +52,23 @@
     <input type="hidden" name="_csrf" th:value="${csrfToken}">
 
     <div id="drop-zone" tabindex="0">
+        <span class="upload-symbol" aria-hidden="true">↑</span>
         <strong>Drop one or more files here</strong>
-        <p>or</p>
+        <p>Documents, photos, videos — bring them over.</p>
         <button id="browse-files" type="button">Choose files</button>
+        <small class="upload-limit" th:text="|Up to ${maxFileSizeLabel} per file|">Choose files to upload</small>
         <input id="file" type="file" name="file" multiple hidden>
     </div>
 
-    <label for="expiration">Delete after</label>
+    <div class="expiration-control"><label for="expiration">Automatically delete after</label>
     <select id="expiration" name="expiration">
         <option value="1h">1 hour</option>
         <option value="24h" selected>24 hours</option>
         <option value="7d">7 days</option>
         <option value="never">Never</option>
     </select>
-    <small>Files upload automatically after you choose or drop them.</small>
+    </div>
+    <small class="field-hint">Uploads start as soon as you choose files.</small>
 </form>
 </section>
 
@@ -106,7 +119,7 @@
 <p id="file-action-status" aria-live="polite"></p>
 
 <p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
-    No files uploaded yet.
+    No files here yet. Send files from any connected device and they’ll appear here.
 </p>
 
 <ul id="files-list">
@@ -126,7 +139,8 @@
     </li>
 </ul>
 </section>
-
+</div>
+<aside class="connection-sidebar" aria-label="Connect and share">
 <section id="connect-device" aria-labelledby="connect-device-heading">
     <h2 id="connect-device-heading">Connect another device</h2>
     <p>Works with desktops, laptops, tablets, and phones. No app installation is needed on the connecting device.</p>
@@ -186,6 +200,10 @@
         <button id="stop-receiving" type="button">Stop guest uploads</button>
     </section>
 </details>
+</aside>
+</main>
+<footer class="dashboard-footer">Quick Drop <span>Local transfers. Your devices, connected.</span></footer>
+</div>
 
 <div id="copy-notification" role="status" aria-live="polite" aria-atomic="true"></div>
 
