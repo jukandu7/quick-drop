@@ -546,3 +546,8 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 #share-qr-options summary { cursor: pointer; padding: 12px 0; color: var(--accent); }
 #share-result { scroll-margin-top: 180px; }
 .share-lifetime { color: var(--muted); }
+
+.selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-basis: 100%; }
+.selection-summary #selection-status { flex-basis: auto; margin: 0; }
+.dashboard-page #file-actions #clear-selection { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; }
+#selection-help { flex-basis: 100%; }

@@ -31,3 +31,23 @@ test('large selections show a bounded filename preview and the complete count', 
     assert.doesNotMatch(description, /file-5.txt/);
     assert.match(description, /15 more/);
 });
+
+test('clear selection clears partial choices and returns focus to selection controls', () => {
+    const choices = [{checked: true}, {checked: false}, {checked: true}];
+    let updated = 0, focused = 0;
+    const context = vm.createContext({fileActionInProgress: false,
+        filesList: {querySelectorAll: () => choices},
+        selectAllButton: {focus() {focused++;}}
+    });
+    vm.runInContext(source, context);
+    context.updateFileControls = () => {updated++;};
+    context.clearFileSelection();
+    assert.equal(choices.some(choice => choice.checked), false);
+    assert.equal(updated, 1);
+    assert.equal(focused, 1);
+    context.fileActionInProgress = true;
+    choices[0].checked = true;
+    context.clearFileSelection();
+    assert.equal(choices[0].checked, true);
+    assert.equal(updated, 1);
+});

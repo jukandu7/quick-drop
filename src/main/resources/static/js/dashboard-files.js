@@ -134,6 +134,13 @@
         });
     }
 
+    function clearFileSelection() {
+        if (fileActionInProgress) return;
+        getFileChoices().forEach(choice => choice.checked = false);
+        updateFileControls();
+        selectAllButton.focus();
+    }
+
     function updateFileControls() {
         updateFileExpirationLabels();
         applyFileFilter();
@@ -150,7 +157,17 @@
                 ? "Select files above to manage them."
                 : selectedCount + (selectedCount === 1 ? " file selected." : " files selected.");
         if (managementSelection.textContent !== managementMessage) managementSelection.textContent = managementMessage;
-        const selectionMessage = selectedCount + " selected";
+        const selectionMessage = selectedCount === 0
+                ? "No files selected"
+                : selectedCount + " of " + choices.length + " shown selected";
+        clearSelectionButton.disabled = fileActionInProgress || selectedCount === 0;
+        downloadSelectedButton.textContent = selectedCount === 0 ? "Download selected"
+                : selectedCount === 1 ? "Download 1 file" : "Download " + selectedCount + " files";
+        shareSelectedButton.textContent = selectedCount === 0 ? "Share selected files"
+                : selectedCount === 1 ? "Share 1 file" : "Share " + selectedCount + " files";
+        selectionHelp.textContent = selectedCount === 0 ? "Use the checkboxes below to select files."
+                : selectedCount === 1 ? "Download here, or share a download link."
+                : "Downloads as one ZIP. Share creates a link.";
         if (selectionStatus.textContent !== selectionMessage) selectionStatus.textContent = selectionMessage;
         shareSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0 || connectionState !== "connected" || !shareBaseUrl;
@@ -159,14 +176,12 @@
         deleteSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
         revokeSelectedButton.disabled = fileActionInProgress || selectedCount === 0;
-        selectAllButton.disabled = fileActionInProgress || choices.length === 0;
+        selectAllButton.disabled = fileActionInProgress || choices.length === 0
+                || choices.every(choice => choice.checked);
         fileSearch.disabled = fileActionInProgress;
         fileSort.disabled = fileActionInProgress;
         choices.forEach(choice => choice.disabled = fileActionInProgress);
-        selectAllButton.textContent = choices.length > 0
-                && choices.every(choice => choice.checked)
-                ? "Clear selection"
-                : "Select all shown";
+        selectAllButton.textContent = "Select all shown";
     }
 
     function downloadSelectedFiles(choices) {

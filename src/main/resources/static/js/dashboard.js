@@ -55,6 +55,8 @@
     const shareSelectedButton = document.getElementById("share-selected");
     const revokeSelectedButton = document.getElementById("revoke-selected");
     const downloadSelectedButton = document.getElementById("download-selected");
+    const clearSelectionButton = document.getElementById("clear-selection");
+    const selectionHelp = document.getElementById("selection-help");
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
             document.getElementById("delete-selected");
@@ -235,11 +237,11 @@
         }
 
         const choices = getVisibleFileChoices();
-        const allSelected = choices.every(choice => choice.checked);
-
-        choices.forEach(choice => choice.checked = !allSelected);
+        choices.forEach(choice => choice.checked = true);
         updateFileControls();
     });
+
+    clearSelectionButton.addEventListener("click", clearFileSelection);
 
     shareSelectedButton.addEventListener("click", () => {
         createShareLink(getSelectedFileChoices());
