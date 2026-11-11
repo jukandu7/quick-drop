@@ -48,6 +48,7 @@ class CsrfPageTests {
             assertThat(token).hasSize(43);
             var html = result.getResponse().getContentAsString();
             assertThat(html).contains("content=\"" + token + "\"");
+            assertThat(html).contains("HTTP connection: PINs and files are sent without encryption.");
             if (!path.startsWith("/receive/")) {
                 assertThat(html).contains("value=\"" + token + "\"");
             }

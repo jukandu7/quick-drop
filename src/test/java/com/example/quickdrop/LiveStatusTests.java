@@ -235,7 +235,7 @@ class LiveStatusTests {
 
     private MockMvc statusMvc(ReceiveLinkService service) {
         return MockMvcBuilders.standaloneSetup(new StatusController(
-                        service, networkAddressService, 8181
+                        service, new com.example.quickdrop.network.PublicUrlService(networkAddressService, "", false, 8181)
                 ))
                 .addFilters(new OwnerAccessFilter(ownerAccessService))
                 .build();

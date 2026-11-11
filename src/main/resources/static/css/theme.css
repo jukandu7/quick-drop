@@ -86,6 +86,15 @@ input::placeholder, textarea::placeholder { color: #a6b4c6; }
 
 .error { color: #ffaaa3; }
 
+.transport-notice {
+    background: #352c18;
+    border: 1px solid #8a713a;
+    border-radius: 0.5rem;
+    color: #ffe2a1;
+    padding: 0.75rem 1rem;
+    max-width: 40rem;
+}
+
 /* Preserve the QR codes' white quiet zone for reliable scanning. */
 #owner-qr,
 #share-qr,

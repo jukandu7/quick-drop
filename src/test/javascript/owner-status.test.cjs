@@ -164,6 +164,19 @@ test('a new network address updates the owner, shared file, sender links, and al
     assert.equal(page.notifications.length, 1);
 });
 
+test('HTTPS public address is preserved in every device, guest, download, and QR link', () => {
+    const page = ownerPage();
+    page.setConnection('connected');
+    page.publish(status('https://quickdrop.example:8443'));
+    page.showShare('https://quickdrop.example:8443/share/file-token', 1);
+    assert.equal(page.node('owner-address').href, 'https://quickdrop.example:8443');
+    assert.equal(qrUrl(page.node('owner-qr')), 'https://quickdrop.example:8443');
+    assert.equal(page.node('receive-url').href, 'https://quickdrop.example:8443/receive/old-session');
+    assert.equal(qrUrl(page.node('receive-qr')), page.node('receive-url').href);
+    assert.equal(page.node('share-url').href, 'https://quickdrop.example:8443/share/file-token');
+    assert.equal(qrUrl(page.node('share-qr')), page.node('share-url').href);
+});
+
 test('missing local network and server disconnection hide device links and disable copying until recovery', () => {
     const page = ownerPage();
     page.setConnection('connected');

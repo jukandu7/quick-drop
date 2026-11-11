@@ -4,7 +4,7 @@ import com.example.quickdrop.controller.HomeController;
 import com.example.quickdrop.controller.OwnerAccessService;
 import com.example.quickdrop.controller.OwnerPinService;
 import com.example.quickdrop.events.FileEventService;
-import com.example.quickdrop.network.NetworkAddressService;
+import com.example.quickdrop.network.PublicUrlService;
 import com.example.quickdrop.qr.QrCodeService;
 import com.example.quickdrop.receive.ReceiveLinkService;
 import com.example.quickdrop.share.ShareLinkService;
@@ -54,11 +54,10 @@ class SelectedDownloadTests {
                 shareLinkService,
                 mock(ReceiveLinkService.class),
                 mock(FileEventService.class),
-                mock(NetworkAddressService.class),
+                mock(PublicUrlService.class),
                 mock(QrCodeService.class),
                 mock(OwnerAccessService.class),
-                mock(OwnerPinService.class),
-                8080
+                mock(OwnerPinService.class)
         );
         when(shareLinkService.storageDirectory()).thenReturn(uploads);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();

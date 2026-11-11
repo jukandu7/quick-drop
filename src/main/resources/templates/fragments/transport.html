@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<p th:fragment="notice" th:if="${transportSecure == false}" class="transport-notice" role="note">
+    HTTP connection: PINs and files are sent without encryption. Use HTTPS on untrusted networks.
+</p>
+</body>
+</html>

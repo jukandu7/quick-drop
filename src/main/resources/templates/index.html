@@ -212,6 +212,7 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body th:attr="data-share-base-url=${shareBaseUrl}">
+<div th:replace="~{fragments/transport :: notice}"></div>
 <h1>Quick Drop</h1>
 <p id="pin-notice" role="status" aria-live="polite"
    th:if="${pinNotice}" th:text="${pinNotice}"></p>
@@ -492,8 +493,8 @@
         connectionStatus.dataset.state = state;
         connectionHelp.hidden = !["reconnecting", "unavailable"].includes(state);
         connectionHelp.textContent = "Keep Quick Drop running on the host computer. "
-                + "If the Wi-Fi changed, open localhost:"
-                + (window.location.port || "8080") + " on that computer "
+                + "If the Wi-Fi changed, open " + (window.location.protocol || "http:") + "//localhost"
+                + (window.location.port ? ":" + window.location.port : "") + " on that computer "
                 + "and open its updated address or QR code on your other device.";
         ownerUnlock.hidden = state !== "locked";
         updateConnectionTools();

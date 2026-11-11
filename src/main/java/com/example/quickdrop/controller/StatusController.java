@@ -1,8 +1,7 @@
 package com.example.quickdrop.controller;
 
-import com.example.quickdrop.network.NetworkAddressService;
+import com.example.quickdrop.network.PublicUrlService;
 import com.example.quickdrop.receive.ReceiveLinkService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,17 +22,14 @@ public class StatusController {
                     .withZone(ZoneId.systemDefault());
 
     private final ReceiveLinkService receiveLinkService;
-    private final NetworkAddressService networkAddressService;
-    private final int serverPort;
+    private final PublicUrlService publicUrls;
 
     public StatusController(
             ReceiveLinkService receiveLinkService,
-            NetworkAddressService networkAddressService,
-            @Value("${server.port:8080}") int serverPort
+            PublicUrlService publicUrls
     ) {
         this.receiveLinkService = receiveLinkService;
-        this.networkAddressService = networkAddressService;
-        this.serverPort = serverPort;
+        this.publicUrls = publicUrls;
     }
 
     @GetMapping(value = "/api/status", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -53,7 +49,7 @@ public class StatusController {
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new OwnerStatus(serverTime, currentShareBaseUrl(), receiving));
+                .body(new OwnerStatus(serverTime, publicUrls.currentBaseUrl(), receiving));
     }
 
     @GetMapping(
@@ -73,17 +69,6 @@ public class StatusController {
                         active,
                         active ? link.expiresAt() : null
                 ));
-    }
-
-    private String currentShareBaseUrl() {
-        String address = networkAddressService.findLocalIpv4Address();
-
-        if (address == null || address.isBlank()
-                || address.startsWith("127.") || address.equals("0.0.0.0")) {
-            return null;
-        }
-
-        return "http://" + address + ":" + serverPort;
     }
 
     public record OwnerStatus(

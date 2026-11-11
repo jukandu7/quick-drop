@@ -68,12 +68,13 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
+<div th:replace="~{fragments/transport :: notice}"></div>
 <main>
     <div th:unless="${localRequest}">
         <h1>Finish setup on the laptop</h1>
         <p>
             For security, the owner PIN can only be created or changed from
-            <strong>localhost:8080</strong> on the laptop running Quick Drop.
+            <strong th:text="${localSetupUrl}">the local setup address</strong> on the laptop running Quick Drop.
         </p>
     </div>
 

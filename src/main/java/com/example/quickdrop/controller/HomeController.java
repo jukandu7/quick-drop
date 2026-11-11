@@ -1,7 +1,7 @@
 package com.example.quickdrop.controller;
 
 import com.example.quickdrop.events.FileEventService;
-import com.example.quickdrop.network.NetworkAddressService;
+import com.example.quickdrop.network.PublicUrlService;
 import com.example.quickdrop.qr.QrCodeService;
 import com.example.quickdrop.receive.ReceiveLinkService;
 import com.example.quickdrop.share.ShareLinkService;
@@ -9,7 +9,6 @@ import com.example.quickdrop.share.ShareLinkService.FileReference;
 import com.google.zxing.WriterException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -58,30 +57,27 @@ public class HomeController {
     private final ShareLinkService shareLinkService;
     private final ReceiveLinkService receiveLinkService;
     private final FileEventService fileEventService;
-    private final NetworkAddressService networkAddressService;
+    private final PublicUrlService publicUrls;
     private final QrCodeService qrCodeService;
     private final OwnerAccessService ownerAccessService;
     private final OwnerPinService ownerPinService;
-    private final int serverPort;
 
     public HomeController(
             ShareLinkService shareLinkService,
             ReceiveLinkService receiveLinkService,
             FileEventService fileEventService,
-            NetworkAddressService networkAddressService,
+            PublicUrlService publicUrls,
             QrCodeService qrCodeService,
             OwnerAccessService ownerAccessService,
-            OwnerPinService ownerPinService,
-            @Value("${server.port:8080}") int serverPort
+            OwnerPinService ownerPinService
     ) {
         this.shareLinkService = shareLinkService;
         this.receiveLinkService = receiveLinkService;
         this.fileEventService = fileEventService;
-        this.networkAddressService = networkAddressService;
+        this.publicUrls = publicUrls;
         this.qrCodeService = qrCodeService;
         this.ownerAccessService = ownerAccessService;
         this.ownerPinService = ownerPinService;
-        this.serverPort = serverPort;
     }
 
     @GetMapping("/")
@@ -95,10 +91,10 @@ public class HomeController {
         }
 
         FilesSnapshot snapshot = createFilesSnapshot();
-        String shareBaseUrl = createShareBaseUrl();
+        String shareBaseUrl = publicUrls.currentBaseUrl();
         ReceiveLinkService.LinkDetails receivingSession =
                 receiveLinkService.findCurrentActive().orElse(null);
-        String senderUrl = receivingSession == null
+        String senderUrl = receivingSession == null || shareBaseUrl == null
                 ? null
                 : shareBaseUrl + "/receive/" + receivingSession.token();
 
@@ -687,13 +683,6 @@ public class HomeController {
         double megabytes = bytes / (1024.0 * 1024.0);
 
         return String.format("%.1f MB of 5 GB used", megabytes);
-    }
-
-    private String createShareBaseUrl() {
-        return "http://"
-                + networkAddressService.findLocalIpv4Address()
-                + ":"
-                + serverPort;
     }
 
     public record UploadResult(

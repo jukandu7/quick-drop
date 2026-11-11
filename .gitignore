@@ -2,6 +2,11 @@ HELP.md
 target/
 data/
 uploads/
+certs/
+*.p12
+*.pfx
+*.jks
+*.key
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

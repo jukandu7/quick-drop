@@ -68,13 +68,14 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
+<div th:replace="~{fragments/transport :: notice}"></div>
 <main>
     <h1>Quick Drop owner access</h1>
 
     <div th:if="${setupRequired}">
         <p>
             The owner PIN has not been created yet. On the computer running
-            Quick Drop, open <strong>localhost:8080</strong> to finish setup.
+            Quick Drop, open <strong th:text="${localSetupUrl}">the local setup address</strong> to finish setup.
         </p>
     </div>
 
