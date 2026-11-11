@@ -178,6 +178,93 @@ class OwnerAccessFilterTests {
         assertThat(uploadChain.getRequest()).isSameAs(uploadRequest);
     }
 
+    @Test
+    void unlistedRoutesAndAssetsRequireOwnerAccess() throws Exception {
+        for (String path : new String[]{"/api/future-admin", "/new-feature", "/qr",
+                "/css/private-export", "/js/new-script.js", "/fonts/private", "/error",
+                "/receive/token/admin", "/share/bundle/token/delete"}) {
+            var response = new MockHttpServletResponse();
+            var chain = new MockFilterChain();
+            filter.doFilter(request("GET", path, "192.168.1.25"), response, chain);
+            assertThat(response.getStatus()).as(path).isEqualTo(401);
+            assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+            assertThat(chain.getRequest()).as(path).isNull();
+        }
+    }
+
+    @Test
+    void publicPagesAndAssetsAllowGetAndHead() throws Exception {
+        for (String method : new String[]{"GET", "HEAD"}) {
+            for (String path : new String[]{"/owner/login", "/owner/setup", "/send",
+                    "/receive/token", "/receive/token/status", "/share/token", "/share/bundle/token",
+                    "/css/theme.css", "/js/upload-batch.js", "/js/live-status.js",
+                    "/js/transfer-modes.js", "/fonts/Roboto-Variable.ttf", "/fonts/OFL.txt"}) {
+                var request = request(method, path, "192.168.1.25");
+                var chain = new MockFilterChain();
+                filter.doFilter(request, new MockHttpServletResponse(), chain);
+                assertThat(chain.getRequest()).as(method + " " + path).isSameAs(request);
+            }
+        }
+    }
+
+    @Test
+    void guestMutationsAreExplicitlyAllowed() throws Exception {
+        for (String path : new String[]{"/owner/login", "/owner/setup", "/owner/logout",
+                "/send/upload", "/receive/token/upload"}) {
+            var request = request("POST", path, "192.168.1.25");
+            var chain = new MockFilterChain();
+            filter.doFilter(request, new MockHttpServletResponse(), chain);
+            assertThat(chain.getRequest()).as(path).isSameAs(request);
+        }
+    }
+
+    @Test
+    void publicPathsDoNotAllowUnlistedMethods() throws Exception {
+        for (String method : new String[]{"POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"}) {
+            for (String path : new String[]{"/css/theme.css", "/share/token", "/receive/token/status"}) {
+                var response = new MockHttpServletResponse();
+                var chain = new MockFilterChain();
+                filter.doFilter(request(method, path, "192.168.1.25"), response, chain);
+                assertThat(response.getStatus()).as(method + " " + path).isEqualTo(401);
+                assertThat(chain.getRequest()).isNull();
+            }
+        }
+    }
+
+    @Test
+    void contextAndPathParametersDoNotBypassDefaultProtection() throws Exception {
+        var request = request("GET", "/quickdrop/api/new;jsessionid=test", "192.168.1.25");
+        request.setContextPath("/quickdrop");
+        var response = new MockHttpServletResponse();
+        filter.doFilter(request, response, new MockFilterChain());
+        assertThat(response.getStatus()).isEqualTo(401);
+
+        request = request("GET", "/quickdrop/owner/login;jsessionid=test", "192.168.1.25");
+        request.setContextPath("/quickdrop");
+        request.setServletPath("/owner/login;jsessionid=test");
+        var chain = new MockFilterChain();
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
+
+    @Test
+    void authenticatedOwnersAndLocalhostCanUseNewRoutes() throws Exception {
+        var pins = org.mockito.Mockito.mock(OwnerPinService.class);
+        org.mockito.Mockito.when(pins.isConfigured()).thenReturn(true);
+        org.mockito.Mockito.when(pins.authenticationVersion()).thenReturn("version");
+        var access = new OwnerAccessService(pins);
+        var ownerFilter = new OwnerAccessFilter(access);
+        var remote = request("GET", "/api/new", "192.168.1.25");
+        access.authenticate(remote);
+        var remoteChain = new MockFilterChain();
+        ownerFilter.doFilter(remote, new MockHttpServletResponse(), remoteChain);
+        assertThat(remoteChain.getRequest()).isSameAs(remote);
+        var local = request("GET", "/api/new", "127.0.0.1");
+        var localChain = new MockFilterChain();
+        ownerFilter.doFilter(local, new MockHttpServletResponse(), localChain);
+        assertThat(localChain.getRequest()).isSameAs(local);
+    }
+
     private MockHttpServletRequest request(
             String method,
             String path,

@@ -156,6 +156,12 @@ node --test src/test/javascript/*.test.cjs
 
 ## Troubleshooting
 
+Access requires owner permissions by default, including newly added routes and resources.
+Only the explicit guest routes and current static assets in `OwnerAccessFilter` bypass
+owner authentication, for their listed HTTP methods. Guest links still enforce their
+token checks, setup remains localhost-only, and mutations still require CSRF verification.
+When adding a public page or asset, review and update that allowlist explicitly.
+
 Uploads are admitted before multipart parsing: owner authentication, CSRF verification,
 and an active receiving link are required where applicable. The retired sender route
 and multipart bodies sent to other routes are rejected. Uploads allow at most two

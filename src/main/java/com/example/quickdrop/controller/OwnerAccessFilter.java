@@ -13,10 +13,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class OwnerAccessFilter extends OncePerRequestFilter {
+
+    // Exact assets, not directory prefixes: adding a controller or resource must
+    // never silently expose it to unauthenticated remote clients.
+    private static final Set<String> PUBLIC_ASSETS = Set.of(
+            "/css/theme.css", "/fonts/Roboto-Variable.ttf", "/fonts/OFL.txt",
+            "/js/upload-batch.js", "/js/live-status.js", "/js/transfer-modes.js"
+    );
 
     private final OwnerAccessService ownerAccessService;
 
@@ -26,7 +34,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !isProtectedPath(path(request));
+        return isPublicRequest(request.getMethod(), path(request));
     }
 
     @Override
@@ -69,20 +77,28 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
                 || requestPath.startsWith("/h2-console");
     }
 
-    private boolean isProtectedPath(String requestPath) {
-        return requestPath.equals("/")
-                || requestPath.equals("/api/files")
-                || requestPath.equals("/api/status")
-                || requestPath.equals("/events/files")
-                || requestPath.equals("/upload")
-                || requestPath.equals("/download")
-                || requestPath.equals("/download/selected")
-                || requestPath.equals("/files")
-                || requestPath.equals("/share/bundles")
-                || requestPath.equals("/share-links")
-                || requestPath.equals("/receive-links")
-                || requestPath.equals("/h2-console")
-                || requestPath.startsWith("/h2-console/");
+    private boolean isPublicRequest(String method, String path) {
+        if (method.equals("GET") || method.equals("HEAD")) {
+            return PUBLIC_ASSETS.contains(path)
+                    || path.equals("/owner/login")
+                    // Setup retains its localhost-only checks in OwnerController.
+                    || path.equals("/owner/setup")
+                    || path.equals("/send")
+                    || path.matches("/receive/[^/]+")
+                    || path.matches("/receive/[^/]+/status")
+                    || path.matches("/share/[^/]+")
+                    || path.matches("/share/bundle/[^/]+");
+        }
+        if (method.equals("POST")) {
+            return path.equals("/owner/login")
+                    || path.equals("/owner/setup")
+                    || path.equals("/owner/logout")
+                    || path.equals("/send/upload") // Retired route returns 410.
+                    || path.matches("/receive/[^/]+/upload");
+        }
+        // Everything else requires owner access, including future routes and
+        // new HTTP methods on an otherwise public path. CSRF remains separate.
+        return false;
     }
 
     private String path(HttpServletRequest request) {
