@@ -33,13 +33,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -47,28 +44,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Controller
 public class HomeController {
 
-    private static final long MAX_FILE_SIZE_BYTES =
-            3L * 1024 * 1024 * 1024;
-
-    private static final long MAX_TOTAL_STORAGE_BYTES =
-            5L * 1024 * 1024 * 1024;
-
     private static final DateTimeFormatter EXPIRATION_FORMATTER =
             DateTimeFormatter
                     .ofPattern("MMM d, yyyy 'at' h:mm a")
                     .withZone(ZoneId.systemDefault());
-
-    private final Path uploadDirectory =
-            Path.of("uploads").toAbsolutePath().normalize();
-    private final Path uploadStagingDirectory =
-            uploadDirectory.resolve(".staging");
 
     private final ShareLinkService shareLinkService;
     private final ReceiveLinkService receiveLinkService;
@@ -100,7 +85,7 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public synchronized String home(
+    public String home(
             Model model,
             HttpServletRequest request
     ) throws IOException {
@@ -147,7 +132,7 @@ public class HomeController {
     }
 
     @GetMapping("/api/files")
-    public synchronized ResponseEntity<FilesSnapshot> filesSnapshot()
+    public ResponseEntity<FilesSnapshot> filesSnapshot()
             throws IOException {
         return ResponseEntity.ok(createFilesSnapshot());
     }
@@ -277,7 +262,7 @@ public class HomeController {
     }
 
     @PostMapping("/send/upload")
-    public synchronized ResponseEntity<ReceiveUploadResult> senderUpload(
+    public ResponseEntity<ReceiveUploadResult> senderUpload(
             @RequestParam("file") MultipartFile file
     ) {
         return ResponseEntity.status(HttpStatus.GONE)
@@ -289,7 +274,7 @@ public class HomeController {
     }
 
     @PostMapping("/receive/{token}/upload")
-    public synchronized ResponseEntity<ReceiveUploadResult> receiveUpload(
+    public ResponseEntity<ReceiveUploadResult> receiveUpload(
             @PathVariable String token,
             @RequestParam("file") MultipartFile file
     ) throws IOException {
@@ -336,7 +321,7 @@ public class HomeController {
     }
 
     @PostMapping("/upload")
-    public synchronized ResponseEntity<UploadResult> upload(
+    public ResponseEntity<UploadResult> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam(defaultValue = "24h") String expiration,
             @RequestParam(defaultValue = "false") boolean overwrite
@@ -375,112 +360,25 @@ public class HomeController {
     }
 
     private ResponseEntity<UploadResult> storeUpload(
-            MultipartFile file,
-            String expiration,
-            boolean overwrite,
-            boolean renameDuplicate
+            MultipartFile file, String expiration, boolean overwrite, boolean renameDuplicate
     ) throws IOException {
-        if (file.isEmpty()
-                || file.getOriginalFilename() == null
-                || file.getOriginalFilename().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(UploadResult.error("Please select a file."));
-        }
-
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                    .body(UploadResult.error(
-                            "Upload rejected: files must be 3 GB or smaller."
-                    ));
-        }
-
-        Files.createDirectories(uploadDirectory);
-        shareLinkService.deleteExpiredFiles();
-
-        String filename;
-
-        try {
-            filename = Path.of(file.getOriginalFilename())
-                    .getFileName()
-                    .toString();
-        } catch (RuntimeException exception) {
-            return ResponseEntity.badRequest()
-                    .body(UploadResult.error("Invalid filename."));
-        }
-
-        Path destination = uploadDirectory.resolve(filename).normalize();
-
-        if (!destination.startsWith(uploadDirectory)) {
-            return ResponseEntity.badRequest()
-                    .body(UploadResult.error("Invalid filename."));
-        }
-
-        if (renameDuplicate && (Files.exists(destination) || shareLinkService.findByFilename(filename).isPresent())) {
-            filename = findAvailableFilename(filename);
-            destination = uploadDirectory.resolve(filename).normalize();
-        }
-
-        if (Files.isRegularFile(destination)) shareLinkService.getOrCreateLink(filename);
-        FileReference existingFile = shareLinkService.findByFilename(filename).orElse(null);
-        if ((Files.isRegularFile(destination) || existingFile != null) && !overwrite) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(UploadResult.duplicate(filename));
-        }
-
-        Path existingPath = existingFile == null ? destination : existingFile.path();
-        long existingSize = Files.isRegularFile(existingPath)
-                ? Files.size(existingPath)
-                : 0;
-        long projectedStorage = calculateUsedStorage()
-                - existingSize
-                + file.getSize();
-
-        if (projectedStorage > MAX_TOTAL_STORAGE_BYTES) {
-            return ResponseEntity.status(HttpStatus.INSUFFICIENT_STORAGE)
-                    .body(UploadResult.error(
-                            "Upload rejected: Quick Drop's 5 GB storage "
-                                    + "limit would be exceeded."
-                    ));
-        }
-
         Instant expiresAt;
-
         try {
             expiresAt = calculateExpiration(expiration);
         } catch (IllegalArgumentException exception) {
-            return ResponseEntity.badRequest()
-                    .body(UploadResult.error(
-                            "Choose a valid expiration time."
-                    ));
+            return ResponseEntity.badRequest().body(UploadResult.error("Choose a valid expiration time."));
         }
-
-        // Never overwrite a path that an already-authorized download may be reading.
-        String storageKey = java.util.UUID.randomUUID().toString();
-        Path versions = uploadDirectory.resolve(".versions");
-        Files.createDirectories(versions);
-        destination = versions.resolve(storageKey);
-        replaceFileFromUpload(file, destination);
-
-        ShareLinkService.LinkDetails shareLink;
         try {
-            shareLink = shareLinkService.createOrUpdateLink(filename, expiresAt, storageKey);
-        } catch (RuntimeException exception) {
-            Files.deleteIfExists(destination);
-            throw exception;
+            ShareLinkService.StoredUpload stored = shareLinkService.storeUpload(file, expiresAt, overwrite, renameDuplicate);
+            return ResponseEntity.ok(new UploadResult(stored.filename() + " uploaded successfully!",
+                    stored.filename(), "/share/" + stored.token(), stored.token(),
+                    formatExpiration(stored.expiresAt()), formatStorage(stored.usedBytes()), false));
+        } catch (ShareLinkService.UploadRejected rejection) {
+            UploadResult result = rejection.duplicateFilename() == null
+                    ? UploadResult.error(rejection.getMessage())
+                    : UploadResult.duplicate(rejection.duplicateFilename());
+            return ResponseEntity.status(rejection.status()).body(result);
         }
-        String expirationLabel = formatExpiration(expiresAt);
-
-        return ResponseEntity.ok(
-                new UploadResult(
-                        filename + " uploaded successfully!",
-                        filename,
-                        "/share/" + shareLink.token(),
-                        shareLink.token(),
-                        expirationLabel,
-                        formatStorage(projectedStorage),
-                        false
-                )
-        );
     }
 
     @GetMapping("/download")
@@ -489,8 +387,8 @@ public class HomeController {
     ) throws IOException {
 
         FileReference file = shareLinkService.findByFilename(filename)
-                .orElse(new FileReference(filename, uploadDirectory.resolve(filename).normalize()));
-        return createDownloadResponse(file);
+                .orElse(null);
+        return file == null ? ResponseEntity.notFound().build() : createDownloadResponse(file);
     }
 
     @PostMapping(value = "/download/selected",
@@ -512,7 +410,7 @@ public class HomeController {
         for (String token : new LinkedHashSet<>(tokens)) {
             FileReference file = shareLinkService.findFile(token).orElse(null);
             Path filePath = file == null ? null : file.path();
-            if (filePath == null || !filePath.normalize().startsWith(uploadDirectory)
+            if (filePath == null || !filePath.normalize().startsWith(shareLinkService.storageDirectory())
                     || !file.filename().equals(Path.of(file.filename()).getFileName().toString())
                     || !Files.isRegularFile(filePath)) {
                 downloadError(response, HttpServletResponse.SC_CONFLICT,
@@ -565,7 +463,7 @@ public class HomeController {
             return ResponseEntity.notFound().build();
         }
 
-        return createDownloadResponse(file);
+        return file == null ? ResponseEntity.notFound().build() : createDownloadResponse(file);
     }
 
     @PostMapping("/share/bundles")
@@ -624,7 +522,7 @@ public class HomeController {
     }
 
     @DeleteMapping("/share-links")
-    public synchronized ResponseEntity<RevokeResult> revokeShareLinks(@RequestBody ShareRequest request) {
+    public ResponseEntity<RevokeResult> revokeShareLinks(@RequestBody ShareRequest request) {
         if (request.tokens() == null || request.tokens().isEmpty() || request.tokens().size() > 1000
                 || request.tokens().stream().anyMatch(token -> token == null || token.isBlank())) {
             return ResponseEntity.badRequest().body(new RevokeResult("Select between 1 and 1000 files.", List.of()));
@@ -646,7 +544,7 @@ public class HomeController {
             return ResponseEntity.badRequest()
                     .body(new DeleteResult(
                             "Select at least one file.",
-                            formatStorage(calculateUsedStorage()),
+                            formatStorage(shareLinkService.usedStorage()),
                             List.of()
                     ));
         }
@@ -658,7 +556,7 @@ public class HomeController {
 
         return ResponseEntity.ok(new DeleteResult(
                 deletedCount + " " + noun + " deleted.",
-                formatStorage(calculateUsedStorage()),
+                formatStorage(shareLinkService.usedStorage()),
                 deletedTokens
         ));
     }
@@ -679,7 +577,7 @@ public class HomeController {
 
         Path filePath = file.path().normalize();
 
-        if (!filePath.startsWith(uploadDirectory)
+        if (!filePath.startsWith(shareLinkService.storageDirectory())
                 || !Files.isRegularFile(filePath)) {
             return ResponseEntity.notFound().build();
         }
@@ -715,45 +613,6 @@ public class HomeController {
         }
     }
 
-    private void replaceFileFromUpload(
-            MultipartFile file,
-            Path destination
-    ) throws IOException {
-        Files.createDirectories(uploadStagingDirectory);
-        Path stagedFile = Files.createTempFile(
-                uploadStagingDirectory,
-                "upload-",
-                ".part"
-        );
-
-        try {
-            try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(
-                        inputStream,
-                        stagedFile,
-                        StandardCopyOption.REPLACE_EXISTING
-                );
-            }
-
-            try {
-                Files.move(
-                        stagedFile,
-                        destination,
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING
-                );
-            } catch (AtomicMoveNotSupportedException exception) {
-                Files.move(
-                        stagedFile,
-                        destination,
-                        StandardCopyOption.REPLACE_EXISTING
-                );
-            }
-        } finally {
-            Files.deleteIfExists(stagedFile);
-        }
-    }
-
     private void writeZip(
             OutputStream outputStream,
             List<FileReference> files
@@ -771,7 +630,7 @@ public class HomeController {
             for (FileReference file : files) {
                 Path filePath = file.path().normalize();
 
-                if (!filePath.startsWith(uploadDirectory)
+                if (!filePath.startsWith(shareLinkService.storageDirectory())
                         || !Files.isRegularFile(filePath)) {
                     if (requireAllFiles) {
                         throw new IOException("A selected file became unavailable.");
@@ -786,39 +645,13 @@ public class HomeController {
         }
     }
 
-    private FileView createFileView(String filename) {
-        ShareLinkService.LinkDetails shareLink =
-                shareLinkService.getOrCreateLink(filename);
-
-        return new FileView(
-                filename,
-                shareLink.token(),
-                formatExpiration(shareLink.expiresAt())
-        );
+    private FilesSnapshot createFilesSnapshot() {
+        ShareLinkService.StorageSnapshot snapshot = shareLinkService.snapshot();
+        List<FileView> files = snapshot.files().stream()
+                .map(file -> new FileView(file.filename(), file.token(), formatExpiration(file.expiresAt())))
+                .toList();
+        return new FilesSnapshot(files, formatStorage(snapshot.usedBytes()));
     }
-
-    private FilesSnapshot createFilesSnapshot() throws IOException {
-        Files.createDirectories(uploadDirectory);
-        shareLinkService.deleteExpiredFiles();
-
-        java.util.Set<String> names = new java.util.TreeSet<>();
-
-        try (Stream<Path> paths = Files.list(uploadDirectory)) {
-            paths
-                    .filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString())
-                    .forEach(names::add);
-        }
-        shareLinkService.storedFiles().stream().filter(file -> Files.isRegularFile(file.path()))
-                .map(FileReference::filename).forEach(names::add);
-        List<FileView> files = names.stream().map(this::createFileView).toList();
-
-        return new FilesSnapshot(
-                files,
-                formatStorage(calculateUsedStorage())
-        );
-    }
-
     private Instant calculateExpiration(String expiration) {
         return switch (expiration) {
             case "1h" -> Instant.now().plus(Duration.ofHours(1));
@@ -842,59 +675,12 @@ public class HomeController {
         };
     }
 
-    private String findAvailableFilename(String filename) {
-        int extensionStart = filename.lastIndexOf('.');
-        boolean hasExtension = extensionStart > 0
-                && extensionStart < filename.length() - 1;
-        String baseName = hasExtension
-                ? filename.substring(0, extensionStart)
-                : filename;
-        String extension = hasExtension
-                ? filename.substring(extensionStart)
-                : "";
-
-        for (int copyNumber = 1; ; copyNumber++) {
-            String candidate = baseName
-                    + " ("
-                    + copyNumber
-                    + ")"
-                    + extension;
-            Path candidatePath = uploadDirectory
-                    .resolve(candidate)
-                    .normalize();
-
-            if (candidatePath.startsWith(uploadDirectory)
-                    && !Files.exists(candidatePath)
-                    && shareLinkService.findByFilename(candidate).isEmpty()) {
-                return candidate;
-            }
-        }
-    }
-
     private String formatExpiration(Instant expiresAt) {
         if (expiresAt == null) {
             return "Never expires";
         }
 
         return "Expires " + EXPIRATION_FORMATTER.format(expiresAt);
-    }
-
-    private long calculateUsedStorage() throws IOException {
-        try (Stream<Path> paths = Files.walk(uploadDirectory, 2)) {
-            return paths
-                    .filter(path -> !path.startsWith(uploadStagingDirectory))
-                    .filter(Files::isRegularFile)
-                    .mapToLong(path -> {
-                        try {
-                            return Files.size(path);
-                        } catch (IOException exception) {
-                            throw new StorageReadException(exception);
-                        }
-                    })
-                    .sum();
-        } catch (StorageReadException exception) {
-            throw (IOException) exception.getCause();
-        }
     }
 
     private String formatStorage(long bytes) {
@@ -991,10 +777,4 @@ public class HomeController {
     ) {
     }
 
-    private static class StorageReadException extends RuntimeException {
-
-        private StorageReadException(IOException cause) {
-            super(cause);
-        }
-    }
 }

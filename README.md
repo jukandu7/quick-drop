@@ -80,7 +80,11 @@ Settings live in [`src/main/resources/application.properties`](src/main/resource
 
 Storage paths are relative to the working directory. Always launch from the repository root to use the same database and uploads. The `data/` and `uploads/` directories are ignored by Git. Stop the app before backing up these directories together.
 
-New uploads are stored under unique internal IDs in `uploads/.versions/`; original filenames remain in the database and download headers. Existing files directly under `uploads/` remain readable and move to the new layout when replaced. Preserve the database and uploads together when backing up or moving the app.
+New uploads are stored under unique internal IDs in `uploads/.versions/`; original filenames remain in the database and download headers. Existing files directly under `uploads/` with database records remain readable and move to the new layout when replaced. Preserve the database and uploads together when backing up or moving the app. Set `quickdrop.storage-directory` to use a different upload directory.
+
+Uploads, replacement, deletion, expiration, and link revocation share one storage lifecycle coordinator. File contents are staged before publication; database changes commit before superseded or deleted files are removed. Pending deletions are recorded in the database and retried if a file is temporarily locked. A deleted file can therefore remain on disk briefly while already being unavailable through the app.
+
+Recovery runs at startup and every minute. It retries pending deletions, clears abandoned partial uploads, and removes metadata for expired or definitively missing files. Completed files in `.versions/` without database records are moved to `uploads/.recovery/` for manual inspection, not automatically shared or deleted. Untracked legacy files at the upload root are left untouched and are not automatically listed. File-list reads never recreate metadata or reset expiration dates. Files awaiting cleanup and quarantined files still count toward storage usage.
 
 ## Build and test
 

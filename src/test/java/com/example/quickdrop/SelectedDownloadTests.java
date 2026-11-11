@@ -60,7 +60,7 @@ class SelectedDownloadTests {
                 mock(OwnerPinService.class),
                 8080
         );
-        ReflectionTestUtils.setField(controller, "uploadDirectory", uploads);
+        when(shareLinkService.storageDirectory()).thenReturn(uploads);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 

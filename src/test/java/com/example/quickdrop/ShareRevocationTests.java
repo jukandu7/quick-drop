@@ -44,8 +44,6 @@ class ShareRevocationTests {
     void setUp() {
         bundles.deleteAll();
         files.deleteAll();
-        ReflectionTestUtils.setField(home, "uploadDirectory", uploads);
-        ReflectionTestUtils.setField(home, "uploadStagingDirectory", uploads.resolve(".staging"));
         ReflectionTestUtils.setField(shares, "uploadDirectory", uploads);
         when(pins.isConfigured()).thenReturn(true);
         when(pins.authenticationVersion()).thenReturn("test");
@@ -110,12 +108,12 @@ class ShareRevocationTests {
     @Test
     void legacyFilesRemainReadableAndUpgradeOnReplacement() throws Exception {
         Files.writeString(uploads.resolve("legacy.txt"), "legacy bytes");
-        var legacy = shares.getOrCreateLink("legacy.txt");
-        mvc.perform(get("/share/" + legacy.token())).andExpect(content().string("legacy bytes"));
+        var legacy = files.saveAndFlush(new SharedFile("legacy-token", "legacy.txt", null));
+        mvc.perform(get("/share/" + legacy.getToken())).andExpect(content().string("legacy bytes"));
         var updated = upload("legacy.txt", "new bytes", true);
         assertThat(Files.exists(uploads.resolve("legacy.txt"))).isFalse();
         assertThat(files.findById(updated.shareToken()).orElseThrow().getStorageKey()).isNotNull();
-        mvc.perform(get("/share/" + legacy.token())).andExpect(status().isNotFound());
+        mvc.perform(get("/share/" + legacy.getToken())).andExpect(status().isNotFound());
         mvc.perform(get("/download").param("filename", "legacy.txt")).andExpect(content().string("new bytes"));
     }
 
@@ -162,7 +160,7 @@ class ShareRevocationTests {
         var original = upload("report.txt", "original", false);
         Path originalPath = shares.findFile(original.shareToken()).orElseThrow().path();
         org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("test failure"))
-                .when(files).save(org.mockito.ArgumentMatchers.any(SharedFile.class));
+                .when(files).saveAndFlush(org.mockito.ArgumentMatchers.any(SharedFile.class));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> upload("report.txt", "replacement", true))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(Files.readString(originalPath)).isEqualTo("original");

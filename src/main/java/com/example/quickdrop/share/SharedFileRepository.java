@@ -10,5 +10,7 @@ public interface SharedFileRepository extends JpaRepository<SharedFile, String> 
 
     Optional<SharedFile> findByFilename(String filename);
 
+    boolean existsByStorageKey(String storageKey);
+
     List<SharedFile> findAllByExpiresAtBefore(Instant currentTime);
 }

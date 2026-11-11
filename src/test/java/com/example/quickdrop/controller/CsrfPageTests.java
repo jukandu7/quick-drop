@@ -24,7 +24,7 @@ class CsrfPageTests {
     @Autowired WebApplicationContext context;
     @Autowired CsrfProtectionFilter csrf;
     @Autowired OwnerAccessFilter access;
-    @Autowired HomeController home;
+    @Autowired com.example.quickdrop.share.ShareLinkService shares;
     @MockitoBean OwnerPinService pins;
     @TempDir Path uploads;
     MockMvc mvc;
@@ -33,7 +33,7 @@ class CsrfPageTests {
     void setUp() {
         when(pins.isConfigured()).thenReturn(true);
         when(pins.authenticationVersion()).thenReturn("test-version");
-        ReflectionTestUtils.setField(home, "uploadDirectory", uploads);
+        ReflectionTestUtils.setField(shares, "uploadDirectory", uploads);
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(access, csrf).build();
     }
 
