@@ -7,7 +7,7 @@ import java.util.Locale;
 
 public final class DisplayFormats {
     private static final DateTimeFormatter EXPIRATION = DateTimeFormatter
-            .ofPattern("MMM d, yyyy 'at' h:mm a", Locale.ENGLISH).withZone(ZoneId.systemDefault());
+            .ofPattern("MMM d, yyyy 'at' h:mm:ss a z (XXX)", Locale.ENGLISH).withZone(ZoneId.systemDefault());
 
     private DisplayFormats() { }
 

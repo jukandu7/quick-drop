@@ -111,7 +111,31 @@
         noMatches.hidden = choices.length === 0 || visible !== 0;
     }
 
+    function relativeExpiration(expiresAt, now = Date.now()) {
+        if (!expiresAt) return "";
+        const remaining = Date.parse(expiresAt) - now;
+        if (!Number.isFinite(remaining)) return "";
+        if (remaining <= 0) return "Expired — awaiting removal";
+        if (remaining < 60000) return "Expires in less than a minute";
+        const unit = remaining < 3600000 ? "minute" : remaining < 86400000 ? "hour" : "day";
+        const duration = unit === "minute" ? 60000 : unit === "hour" ? 3600000 : 86400000;
+        const count = Math.ceil(remaining / duration);
+        return "Expires in about " + count + " " + unit + (count === 1 ? "" : "s");
+    }
+
+    function updateFileExpirationLabels() {
+        getFileChoices().forEach(choice => {
+            const row = choice.closest("li");
+            const label = row.querySelector(".expiration-relative");
+            if (!label) return;
+            const message = relativeExpiration(row.dataset.expiresAt);
+            if (label.textContent !== message) label.textContent = message;
+            label.hidden = !message;
+        });
+    }
+
     function updateFileControls() {
+        updateFileExpirationLabels();
         applyFileFilter();
         const choices = getVisibleFileChoices();
         const selectedCount = choices
@@ -396,6 +420,8 @@
         const details = document.createElement("span");
         const link = document.createElement("a");
         const expirationText = document.createElement("small");
+        const relativeText = document.createElement("small");
+        relativeText.className = "expiration-relative";
         const sizeText = document.createElement("small");
         sizeText.className = "file-size";
         sizeText.textContent = sizeLabel || "Checking size…";
@@ -417,6 +443,7 @@
 
         details.appendChild(link);
         details.appendChild(sizeText);
+        details.appendChild(relativeText);
         details.appendChild(expirationText);
         listItem.appendChild(checkbox);
         listItem.appendChild(details);

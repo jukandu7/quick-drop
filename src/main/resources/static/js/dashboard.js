@@ -110,6 +110,7 @@
     }
 
     window.setInterval(scheduleAvailableFilesSync, 30000);
+    window.setInterval(updateFileExpirationLabels, 30000);
 
     browseFilesButton.addEventListener("click", () => fileInput.click());
     retryFailedButton.addEventListener("click", () => startUploads([], true));

@@ -547,3 +547,5 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .management-delete { border-color: #76514f; }
 .management-delete h3 { color: #ffb6ae; }
 #management-selection { font-weight: 550; }
+
+.file-details .expiration-relative { display: block; margin-top: 6px; font-size: .8rem; color: var(--text); }
