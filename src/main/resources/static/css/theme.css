@@ -1,0 +1,92 @@
+:root {
+    color-scheme: dark;
+    --page: #11151c;
+    --surface: #1b2330;
+    --field: #151c26;
+    --border: #526176;
+    --text: #e6edf5;
+    --accent: #9ac4ff;
+    --highlight: #233b59;
+    background: var(--page);
+    color: var(--text);
+    accent-color: var(--accent);
+}
+
+body {
+    background: var(--page);
+    color: var(--text);
+}
+
+a { color: var(--accent); }
+a:visited { color: #c5b6fa; }
+a:hover { color: #c9e0ff; }
+
+button,
+input,
+select,
+textarea,
+input::file-selector-button {
+    background: var(--field);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+}
+
+button,
+input::file-selector-button {
+    background: var(--surface);
+    cursor: pointer;
+}
+
+button:hover:not(:disabled),
+input::file-selector-button:hover {
+    background: var(--highlight);
+    border-color: var(--accent);
+}
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+input::placeholder, textarea::placeholder { color: #a6b4c6; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.sender-shell,
+#connect-device,
+#share-result,
+#receive-result {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.sender-shell { box-shadow: 0 0.75rem 2rem #00000040; }
+.sender-label { color: var(--accent); }
+.sender-boundary { background: var(--highlight); border-color: var(--accent); }
+
+#owner-address,
+#drop-zone,
+#receive-drop-zone {
+    background: var(--field);
+    border-color: var(--border);
+}
+
+#drop-zone.drag-over,
+#receive-drop-zone.drag-over,
+#mode-switch button[aria-pressed="true"] {
+    background: var(--highlight);
+    border-color: var(--accent);
+}
+
+#mode-switch button { border-color: var(--border); }
+#mode-switch button[aria-pressed="true"] { border-color: var(--accent); }
+
+#pin-notice,
+#copy-notification {
+    background: #183e2b;
+    color: #b4f0ca;
+    border-color: #508d65;
+}
+
+.error { color: #ffaaa3; }
+
+/* Preserve the QR codes' white quiet zone for reliable scanning. */
+#owner-qr,
+#share-qr,
+#receive-qr { background: white; }
