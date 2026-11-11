@@ -121,6 +121,11 @@
         selectAllButton.hidden = fileActions.hidden;
         document.getElementById("file-management").hidden = fileActions.hidden;
         emptyMessage.hidden = getFileChoices().length !== 0;
+        const managementSelection = document.getElementById("management-selection");
+        const managementMessage = selectedCount === 0
+                ? "Select files above to manage them."
+                : selectedCount + (selectedCount === 1 ? " file selected." : " files selected.");
+        if (managementSelection.textContent !== managementMessage) managementSelection.textContent = managementMessage;
         const selectionMessage = selectedCount + " selected";
         if (selectionStatus.textContent !== selectionMessage) selectionStatus.textContent = selectionMessage;
         shareSelectedButton.disabled = fileActionInProgress
@@ -420,9 +425,17 @@
         updateFileControls();
     }
 
+    function describeFileSelection(choices) {
+        const names = choices.slice(0, 5).map(choice => '• ' + (choice.dataset?.filename || "Selected file"));
+        if (choices.length > 5) names.push("…and " + (choices.length - 5) + " more.");
+        return choices.length + (choices.length === 1 ? " selected file:\n" : " selected files:\n") + names.join("\n");
+    }
+
     async function revokeDownloadLinks(choices) {
         if (fileActionInProgress || choices.length === 0) return;
-        if (!window.confirm("Revoke existing download links for these files? Any combined links containing them will also stop working. The files will be kept.")) return;
+        if (!window.confirm("Revoke download links for " + describeFileSelection(choices)
+                + "\n\nExisting links, including combined links containing these files, will stop working."
+                + " The files will be kept. You can create new links afterward.")) return;
         const tokens = choices.map(choice => choice.value);
         fileActionInProgress = true;
         updateFileControls();
@@ -456,12 +469,10 @@
         const filenamesByToken = new Map(
                 choices.map(choice => [choice.value, choice.dataset.filename])
         );
-        const description = tokens.length === 1
-                ? '"' + filenamesByToken.get(tokens[0]) + '"'
-                : tokens.length + " selected files";
-
         if (!window.confirm(
-                "Permanently delete " + description + "?"
+                "Permanently delete " + describeFileSelection(choices)
+                + "\n\nThis cannot be undone. These files and their download links will be removed from Quick Drop."
+                + " Copies already downloaded to other devices will not be deleted."
         )) {
             return;
         }

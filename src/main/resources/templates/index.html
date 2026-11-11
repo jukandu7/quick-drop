@@ -145,9 +145,17 @@
 </ul>
 <details id="file-management" th:hidden="${#lists.isEmpty(files)}">
     <summary>Manage selected files</summary>
-    <p>Revoking links keeps the files. Deleting removes them permanently.</p>
-    <button id="revoke-selected" type="button" disabled>Revoke download links</button>
-    <button id="delete-selected" type="button" disabled>Delete selected</button>
+    <p id="management-selection">Select files above to manage them.</p>
+    <div class="management-action">
+        <h3>Disable shared links</h3>
+        <p id="revoke-help">Existing download links and combined links containing these files will stop working. The files stay here, and you can create new links.</p>
+        <button id="revoke-selected" type="button" aria-describedby="management-selection revoke-help" disabled>Revoke download links</button>
+    </div>
+    <div class="management-action management-delete">
+        <h3>Permanently delete files</h3>
+        <p id="delete-help">Remove the selected files from Quick Drop and disable their download links. This cannot be undone. Copies already downloaded to other devices are kept.</p>
+        <button id="delete-selected" type="button" aria-describedby="management-selection delete-help" disabled>Delete permanently</button>
+    </div>
 </details>
 </section>
 </div>

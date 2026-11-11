@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const template = fs.readFileSync(path.resolve(__dirname, '../../main/resources/static/js/dashboard-files.js'), 'utf8');
-const source = template.slice(template.indexOf('    async function revokeDownloadLinks('), template.indexOf('    async function deleteFiles('));
+const source = template.slice(template.indexOf('    function describeFileSelection('), template.indexOf('    async function deleteFiles('));
 
 function page({confirm = true, ok = true, failure = false} = {}) {
     const calls = [], invalidated = [];

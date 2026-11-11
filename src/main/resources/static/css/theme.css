@@ -539,3 +539,11 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
     .dashboard-page #files-list li.is-selected { outline: 2px solid Highlight; }
     #mode-switch button[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
+
+/* Separate link revocation from permanent file removal. */
+.management-action { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: #121a25; }
+.management-action h3 { margin: 0 0 8px; font-size: 1rem; }
+#file-management .management-action p { margin: 0 0 12px; }
+.management-delete { border-color: #76514f; }
+.management-delete h3 { color: #ffb6ae; }
+#management-selection { font-weight: 550; }
