@@ -21,7 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -38,7 +38,9 @@ public class ShareLinkService {
     private final FileEventService events;
     private final TransactionTemplate transaction;
     // Acquired before starting the transaction and released only after commit/rollback.
-    private final ReentrantLock lifecycle = new ReentrantLock(true);
+    private final ReentrantReadWriteLock access = new ReentrantReadWriteLock(true);
+    private final ReentrantReadWriteLock.WriteLock lifecycle = access.writeLock();
+    private final ThreadLocal<Boolean> notificationPending = new ThreadLocal<>();
     private final Set<Path> activeStages = new HashSet<>();
     private final Path uploadDirectory;
 
@@ -60,21 +62,33 @@ public class ShareLinkService {
     public Path storageDirectory() { return uploadDirectory; }
 
     private <T> T read(Supplier<T> action) {
-        lifecycle.lock();
+        access.readLock().lock();
         try { return transaction.execute(status -> action.get()); }
-        finally { lifecycle.unlock(); }
+        finally { access.readLock().unlock(); }
     }
 
     private <T> T change(Supplier<T> action) {
         lifecycle.lock();
         try {
             T result = transaction.execute(status -> action.get());
+            notificationPending.set(true);
             // Neither failed cleanup nor notification may turn a committed operation into a rollback.
             drainPendingDeletes();
+            return result;
+        } finally { releaseWriteLock(); }
+    }
+
+    private void releaseWriteLock() {
+        // Upload and recovery can nest change(). Notify once after the outermost
+        // lock is released, so a slow SSE client never holds up storage access.
+        boolean outermost = access.getWriteHoldCount() == 1;
+        boolean notify = outermost && Boolean.TRUE.equals(notificationPending.get());
+        if (outermost) notificationPending.remove();
+        lifecycle.unlock();
+        if (notify) {
             try { events.filesChangedAfterCommit(); }
             catch (RuntimeException exception) { log.warn("File change notification failed", exception); }
-            return result;
-        } finally { lifecycle.unlock(); }
+        }
     }
 
     public StoredUpload storeUpload(MultipartFile file, Instant expiresAt, boolean overwrite,
@@ -98,7 +112,7 @@ public class ShareLinkService {
             Files.createDirectories(uploadDirectory.resolve(".staging"));
             staged = Files.createTempFile(uploadDirectory.resolve(".staging"), "upload-", ".part");
             activeStages.add(staged);
-        } finally { lifecycle.unlock(); }
+        } finally { releaseWriteLock(); }
         try {
             // Slow copying is outside the lifecycle lock; recovery knows this stage is live.
             try (var input = file.getInputStream()) {
@@ -147,11 +161,11 @@ public class ShareLinkService {
                     if (failure instanceof UncheckedIOException io) throw io.getCause();
                     throw failure;
                 }
-            } finally { lifecycle.unlock(); }
+            } finally { releaseWriteLock(); }
         } finally {
             lifecycle.lock();
             try { activeStages.remove(staged); quietDelete(staged); }
-            finally { lifecycle.unlock(); }
+            finally { releaseWriteLock(); }
         }
     }
 
@@ -277,7 +291,7 @@ public class ShareLinkService {
             }
         } catch (IOException | RuntimeException exception) {
             log.warn("Storage recovery incomplete; it will retry in one minute", exception);
-        } finally { lifecycle.unlock(); }
+        } finally { releaseWriteLock(); }
     }
 
     private void drainPendingDeletes() {

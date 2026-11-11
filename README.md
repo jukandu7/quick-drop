@@ -168,6 +168,12 @@ another filename. A heartbeat checks idle streams every 15 seconds. Streams also
 expire after five minutes; the browser reconnects through normal owner authentication.
 Localhost streams retain the same local-owner access as the dashboard.
 
+Storage lookups and listings can run concurrently. Mutations and recovery retain an
+exclusive lock through database commit and disk cleanup to protect file consistency
+and the shared storage quota. Upload copying happens outside that lock, and live-event
+notifications are sent after the outermost storage lock is released. Slow notification
+delivery can delay its own request, but does not hold the storage lock.
+
 Uploads are admitted before multipart parsing: owner authentication, CSRF verification,
 and an active receiving link are required where applicable. The retired sender route
 and multipart bodies sent to other routes are rejected. Uploads allow at most two

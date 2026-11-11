@@ -274,6 +274,76 @@ class StorageLifecycleTests {
         assertThat(Files.exists(uploads.resolve(".recovery"))).isFalse();
     }
 
+    @Test
+    void independentReadsCanProceedConcurrently() throws Exception {
+        var file = upload("read.txt", "read", false);
+        CountDownLatch reading = new CountDownLatch(1), release = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            var result = files.findAll().stream().filter(row -> row.getToken().equals(file.token())).findFirst();
+            reading.countDown();
+            await(release);
+            return result;
+        }).when(files).findById(file.token());
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var lookup = executor.submit(() -> shares.findFile(file.token()));
+            try {
+                assertThat(reading.await(5, TimeUnit.SECONDS)).isTrue();
+                var listing = executor.submit(shares::snapshot);
+                assertThat(listing.get(2, TimeUnit.SECONDS).files()).hasSize(1);
+            } finally { release.countDown(); }
+            assertThat(lookup.get(5, TimeUnit.SECONDS)).isPresent();
+        }
+    }
+
+    @Test
+    void slowNotificationDoesNotBlockReadsOrAnotherUpload() throws Exception {
+        CountDownLatch notifying = new CountDownLatch(1), release = new CountDownLatch(1);
+        AtomicBoolean first = new AtomicBoolean(true);
+        doAnswer(invocation -> {
+            if (first.getAndSet(false)) { notifying.countDown(); await(release); }
+            return null;
+        }).when(events).filesChangedAfterCommit();
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var slow = executor.submit(() -> upload("first.txt", "first", false));
+            try {
+                assertThat(notifying.await(5, TimeUnit.SECONDS)).isTrue();
+                var other = executor.submit(() -> {
+                    // Notification observes a committed publication, outside all nested locks.
+                    assertThat(shares.findByFilename("first.txt")).isPresent();
+                    return upload("second.txt", "second", false);
+                });
+                assertThat(other.get(2, TimeUnit.SECONDS).filename()).isEqualTo("second.txt");
+            } finally { release.countDown(); }
+            slow.get(5, TimeUnit.SECONDS);
+            assertThat(shares.snapshot().files()).hasSize(2);
+        }
+    }
+
+    @Test
+    void writerWaitsForActiveReaderAndThenCommitsSafely() throws Exception {
+        var file = upload("read.txt", "read", false);
+        CountDownLatch reading = new CountDownLatch(1), release = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            var result = files.findAll().stream().filter(row -> row.getToken().equals(file.token())).findFirst();
+            reading.countDown();
+            await(release);
+            return result;
+        }).when(files).findById(file.token());
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var lookup = executor.submit(() -> shares.findFile(file.token()));
+            Future<List<String>> deletion;
+            try {
+                assertThat(reading.await(5, TimeUnit.SECONDS)).isTrue();
+                deletion = executor.submit(() -> shares.deleteByTokens(List.of(file.token())));
+                assertThatThrownBy(() -> deletion.get(150, TimeUnit.MILLISECONDS))
+                        .isInstanceOf(TimeoutException.class);
+            } finally { release.countDown(); }
+            assertThat(lookup.get(5, TimeUnit.SECONDS)).isPresent();
+            assertThat(deletion.get(5, TimeUnit.SECONDS)).containsExactly(file.token());
+            assertThat(shares.snapshot().files()).isEmpty();
+        }
+    }
+
     private static void await(CountDownLatch latch) throws IOException {
         try {
             if (!latch.await(5, TimeUnit.SECONDS)) throw new IOException("Test latch timed out");
