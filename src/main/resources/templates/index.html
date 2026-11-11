@@ -108,17 +108,13 @@
 <p id="filter-help">Filtering clears selections outside the results.</p>
 <p id="file-results" role="status"></p>
 <p id="no-matches" hidden>No matching files. Try another filename or clear your search.</p>
+<button id="select-all" type="button" th:hidden="${#lists.isEmpty(files)}">Select all shown</button>
 <div id="file-actions" th:hidden="${#lists.isEmpty(files)}">
-    <button id="select-all" type="button">Select all</button>
     <button id="download-selected" type="button" disabled>
         Download selected
     </button>
     <button id="share-selected" type="button" disabled>
         Create share link
-    </button>
-    <button id="revoke-selected" type="button" disabled>Revoke download links</button>
-    <button id="delete-selected" type="button" disabled>
-        Delete selected
     </button>
     <span id="selection-status" role="status">0 selected</span>
     <p>Multiple files download as a ZIP.</p>
@@ -146,6 +142,12 @@
         </span>
     </li>
 </ul>
+<details id="file-management" th:hidden="${#lists.isEmpty(files)}">
+    <summary>Manage selected files</summary>
+    <p>Revoking links keeps the files. Deleting removes them permanently.</p>
+    <button id="revoke-selected" type="button" disabled>Revoke download links</button>
+    <button id="delete-selected" type="button" disabled>Delete selected</button>
+</details>
 </section>
 </div>
 <aside class="connection-sidebar" aria-label="Connect and share">

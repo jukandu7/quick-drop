@@ -504,3 +504,23 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
     #file-actions p { margin: 0; font-size: .75rem; }
     #selection-status { order: -1; }
 }
+
+/* Keep the mobile action bar compact and controls comfortable to tap. */
+#file-management { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 8px; }
+#file-management summary { cursor: pointer; color: var(--accent); }
+#file-management p { color: var(--muted); font-size: .85rem; }
+#file-management button { margin: 4px 0; }
+@media (max-width: 760px) {
+    .dashboard-page button, .dashboard-page select { min-height: 44px; }
+    .dashboard-page input[type="search"], .dashboard-page select { font-size: 16px; }
+    .dashboard-nav a, .brand { min-height: 44px; display: inline-flex; align-items: center; }
+    .dashboard-page summary { min-height: 44px; box-sizing: border-box; padding-top: 12px; padding-bottom: 12px; }
+    .dashboard-page .file-choice { width: 44px; height: 44px; flex: 0 0 44px; margin: 0; }
+    .file-details a { display: inline-flex; align-items: center; min-height: 44px; overflow-wrap: anywhere; max-width: 100%; }
+    .dashboard-page #file-actions { margin-top: 12px; top: max(8px, env(safe-area-inset-top)); }
+    #file-actions button { min-width: 0; padding: 9px 8px; }
+    #file-management button { width: 100%; }
+}
+@media (max-width: 760px) and (max-height: 480px) {
+    #file-actions { position: static; }
+}

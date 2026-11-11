@@ -109,6 +109,8 @@
                 .filter(choice => choice.checked).length;
 
         fileActions.hidden = getFileChoices().length === 0;
+        selectAllButton.hidden = fileActions.hidden;
+        document.getElementById("file-management").hidden = fileActions.hidden;
         emptyMessage.hidden = getFileChoices().length !== 0;
         selectionStatus.textContent = selectedCount + " selected";
         shareSelectedButton.disabled = fileActionInProgress
