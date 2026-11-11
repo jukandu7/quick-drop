@@ -551,3 +551,7 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .selection-summary #selection-status { flex-basis: auto; margin: 0; }
 .dashboard-page #file-actions #clear-selection { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; }
 #selection-help { flex-basis: 100%; }
+
+.inline-help { margin-top: 12px; font-size: .8rem; color: var(--muted); }
+.inline-help summary { cursor: pointer; color: var(--accent); padding: 12px 0; }
+.inline-help p { margin: 8px 0; }

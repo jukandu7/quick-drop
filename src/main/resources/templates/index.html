@@ -25,7 +25,7 @@
 <div th:replace="~{fragments/transport :: notice}"></div>
 <div class="dashboard-intro">
 <div><p class="eyebrow">YOUR LOCAL FILE SPACE</p><h1>Files, from here to there.</h1>
-<p class="intro-description">Files are stored on the computer running Quick Drop. Open Quick Drop on another device to download them.</p></div>
+<p class="intro-description">Add files here. Open Quick Drop on another device to download them.</p></div>
 <div class="connection-summary">
 <p id="connection-status" role="status" aria-live="polite">Checking connection...</p>
 <p id="connection-help" hidden></p>
@@ -38,7 +38,7 @@
 <div class="transfer-workspace">
 <section id="add-files-panel" aria-labelledby="add-files-heading">
 <h2 id="add-files-heading">Add files</h2>
-<p class="section-description">Upload a copy from this device to the computer running Quick Drop. Your original files stay on this device.</p>
+<p class="section-description">Files are stored on the computer running Quick Drop. Your originals stay on this device.</p>
 
 <form id="upload-form"
       action="/upload"
@@ -49,7 +49,6 @@
     <div id="drop-zone" tabindex="0">
         <span class="upload-symbol" aria-hidden="true">↑</span>
         <strong>Drop one or more files here</strong>
-        <p>Documents, photos, videos — bring them over.</p>
         <button id="browse-files" type="button">Choose files</button>
         <small class="upload-limit" th:text="|Up to ${maxFileSizeLabel} per file|">Choose files to upload</small>
         <input id="file" type="file" name="file" multiple hidden>
@@ -64,6 +63,11 @@
     </select>
     </div>
     <small class="field-hint">Uploads start as soon as you choose files.</small>
+    <details class="inline-help">
+        <summary>How storage and deletion work</summary>
+        <p>The delete-after setting applies to the copy stored in Quick Drop. It does not delete your originals or copies already downloaded to other devices.</p>
+        <p>Downloading saves a copy on the device using this browser. Keep the computer running Quick Drop on and connected while transferring files.</p>
+    </details>
 </form>
 </section>
 
@@ -79,13 +83,6 @@
 
 <section id="your-files-panel" aria-labelledby="your-files-heading">
 <h2 id="your-files-heading">Your files</h2>
-<p>
-    These files are stored on the computer running Quick Drop.
-    Select files and download them to save a copy on this device.
-</p>
-
-
-
 <p id="storage-status" th:text="${storageLabel}"></p>
 
 <div class="file-browser-tools">
@@ -113,7 +110,7 @@
 <section id="share-result" aria-labelledby="share-heading" tabindex="-1" hidden>
     <h2 id="share-heading">Share a download</h2>
     <p id="share-files-label"></p>
-    <p>Anyone with this link can download the files listed here without your owner PIN. It does not let them browse your other files or upload anything.</p>
+    <p>Anyone with this link can download only the files listed here. No owner PIN is needed.</p>
     <p>Send the link to someone on the same local network. Keep the computer running Quick Drop on and connected.</p>
     <p><a id="share-url" target="_blank" rel="noopener" aria-label="Open shared download"></a></p>
     <button id="copy-again" type="button">Copy download link</button>
@@ -123,7 +120,10 @@
         <summary>Or scan a QR code</summary>
         <img id="share-qr" alt="QR code for the download link">
     </details>
-    <p class="share-lifetime">The link stops working when a shared file expires, is deleted or replaced, or its link is disabled.</p>
+    <details class="inline-help">
+        <summary>When does this link stop working?</summary>
+        <p>The link stops working when a shared file expires, is deleted or replaced, or its link is disabled. It never gives access to other files or allows uploads.</p>
+    </details>
     <button id="close-share" type="button">Close sharing panel</button>
     <small>Closing this panel keeps the link active.</small>
 </section>
@@ -180,12 +180,11 @@
     <p><a id="owner-address" th:href="${shareBaseUrl}" th:text="${shareBaseUrl}" hidden></a></p>
     <button id="copy-owner-link" type="button" disabled>Copy address</button>
     <p id="network-status">Checking the host computer's network address...</p>
-    <p>Prefer using your camera? Scan the optional QR code below.</p>
     <details id="device-qr-options">
         <summary>Or scan a QR code</summary>
         <img id="owner-qr" alt="QR code to connect your device to the owner dashboard" hidden>
     </details>
-    <p>Keep Quick Drop running on the host computer. If its network changes, use the updated address or QR code shown here.</p>
+    <p>Keep Quick Drop running. If the network changes, use the updated address shown here.</p>
     <p>
         Use this address only for your own trusted devices. Your PIN is not included in the address or QR code.
     </p>
@@ -198,7 +197,7 @@
         <h2>Upload-only access</h2>
         <p>
             Anyone with this temporary link can send files to your Quick Drop computer.
-            They cannot see, download, share, or delete your stored files, and do not need your owner PIN.
+            They cannot see, download, share, or delete your stored files.
         </p>
         <div id="receive-start-controls" th:hidden="${receivingActive}">
             <label for="receive-expiration">Allow uploads for</label>
@@ -218,7 +217,7 @@
     <section id="receive-result" th:hidden="${!receivingActive}">
         <h2>Upload link</h2>
         <img id="receive-qr" alt="QR code for uploading files only">
-        <p>This link only lets someone upload files. Have them open it or scan the code on the same local network. Keep your owner PIN private.</p>
+        <p>Send this link to someone on the same local network. Keep your owner PIN private.</p>
         <p id="receive-expiration-label" th:text="${receivingExpirationLabel}"></p>
         <p><a id="receive-url" target="_blank" rel="noopener" th:href="${senderUrl}" th:text="${senderUrl}"></a></p>
         <button id="copy-receive-link" type="button">Copy upload link</button>
