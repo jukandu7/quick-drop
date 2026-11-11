@@ -23,7 +23,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
     // never silently expose it to unauthenticated remote clients.
     private static final Set<String> PUBLIC_ASSETS = Set.of(
             "/css/theme.css", "/fonts/Roboto-Variable.ttf", "/fonts/OFL.txt",
-            "/js/upload-batch.js", "/js/live-status.js", "/js/transfer-modes.js"
+            "/js/upload-batch.js", "/js/live-status.js", "/js/transfer-modes.js", "/js/receive.js"
     );
 
     private final OwnerAccessService ownerAccessService;

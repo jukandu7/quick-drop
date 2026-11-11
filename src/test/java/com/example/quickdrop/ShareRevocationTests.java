@@ -31,6 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:share-revocation")
 class ShareRevocationTests {
     @Autowired HomeController home;
+    @Autowired UploadController uploadsController;
+    @Autowired DownloadController downloads;
+    @Autowired FileManagementController management;
     @Autowired ShareLinkService shares;
     @MockitoSpyBean SharedFileRepository files;
     @Autowired ShareBundleRepository bundles;
@@ -47,11 +50,11 @@ class ShareRevocationTests {
         ReflectionTestUtils.setField(shares, "uploadDirectory", uploads);
         when(pins.isConfigured()).thenReturn(true);
         when(pins.authenticationVersion()).thenReturn("test");
-        mvc = MockMvcBuilders.standaloneSetup(home).addFilters(access, csrf).build();
+        mvc = MockMvcBuilders.standaloneSetup(home, uploadsController, downloads, management).addFilters(access, csrf).build();
     }
 
-    private HomeController.UploadResult upload(String name, String contents, boolean overwrite) throws Exception {
-        var response = home.upload(new MockMultipartFile("file", name, "text/plain", contents.getBytes()), "24h", overwrite);
+    private TransferResponses.UploadResult upload(String name, String contents, boolean overwrite) throws Exception {
+        var response = uploadsController.upload(new MockMultipartFile("file", name, "text/plain", contents.getBytes()), "24h", overwrite);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         return response.getBody();
     }
@@ -62,8 +65,8 @@ class ShareRevocationTests {
         var second = upload("other.txt", "other", false);
         var bundle = shares.createBundle(List.of(first.shareToken(), second.shareToken())).orElseThrow();
         var oldFile = shares.findFile(first.shareToken()).orElseThrow();
-        var pendingDownload = home.downloadSharedFile(first.shareToken());
-        var pendingBundle = home.downloadShareBundle(bundle.token());
+        var pendingDownload = downloads.downloadSharedFile(first.shareToken());
+        var pendingBundle = downloads.downloadShareBundle(bundle.token());
 
         var replacement = upload("report.txt", "private replacement", true);
         assertThat(replacement.shareToken()).isNotEqualTo(first.shareToken());
@@ -121,7 +124,7 @@ class ShareRevocationTests {
     void duplicatesStillRequireOverwriteAndDeletionAndExpirationRemoveVersionedFiles() throws Exception {
         var first = upload("report.txt", "original", false);
         Path path = shares.findFile(first.shareToken()).orElseThrow().path();
-        assertThat(home.upload(new MockMultipartFile("file", "report.txt", "text/plain", "other".getBytes()),
+        assertThat(uploadsController.upload(new MockMultipartFile("file", "report.txt", "text/plain", "other".getBytes()),
                 "24h", false).getStatusCode().value()).isEqualTo(409);
         assertThat(Files.readString(path)).isEqualTo("original");
         var row = files.findById(first.shareToken()).orElseThrow();

@@ -198,7 +198,7 @@ class OwnerAccessFilterTests {
             for (String path : new String[]{"/owner/login", "/owner/setup", "/send",
                     "/receive/token", "/receive/token/status", "/share/token", "/share/bundle/token",
                     "/css/theme.css", "/js/upload-batch.js", "/js/live-status.js",
-                    "/js/transfer-modes.js", "/fonts/Roboto-Variable.ttf", "/fonts/OFL.txt"}) {
+                    "/js/transfer-modes.js", "/js/receive.js", "/fonts/Roboto-Variable.ttf", "/fonts/OFL.txt"}) {
                 var request = request(method, path, "192.168.1.25");
                 var chain = new MockFilterChain();
                 filter.doFilter(request, new MockHttpServletResponse(), chain);

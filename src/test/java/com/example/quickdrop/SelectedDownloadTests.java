@@ -1,6 +1,6 @@
 package com.example.quickdrop;
 
-import com.example.quickdrop.controller.HomeController;
+import com.example.quickdrop.controller.DownloadController;
 import com.example.quickdrop.controller.OwnerAccessService;
 import com.example.quickdrop.controller.OwnerPinService;
 import com.example.quickdrop.events.FileEventService;
@@ -50,15 +50,7 @@ class SelectedDownloadTests {
     void setUp() throws Exception {
         uploads = Files.createDirectory(temporaryDirectory.resolve("uploads"));
         shareLinkService = mock(ShareLinkService.class);
-        HomeController controller = new HomeController(
-                shareLinkService,
-                mock(ReceiveLinkService.class),
-                mock(FileEventService.class),
-                mock(PublicUrlService.class),
-                mock(QrCodeService.class),
-                mock(OwnerAccessService.class),
-                mock(OwnerPinService.class), mock(com.example.quickdrop.config.TransferLimits.class)
-        );
+        DownloadController controller = new DownloadController(shareLinkService);
         when(shareLinkService.storageDirectory()).thenReturn(uploads);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
     }

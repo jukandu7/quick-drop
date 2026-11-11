@@ -230,7 +230,7 @@ test('the dashboard has one accessible mode switch and keeps each operation in i
     const controls = template.slice(modeSwitch.start, modeSwitch.end);
     assert.doesNotMatch(controls, /<a\b|<form\b|\bhref=|\/owner\/|\/receive\//i);
     assert.match(template, /<script\b[^>]*src="\/js\/transfer-modes\.js"/);
-    assert.match(template, /new QuickDropModes\(/);
+    assert.match(fs.readFileSync(path.join(resourceRoot, 'static/js/dashboard.js'), 'utf8'), /new QuickDropModes\(/);
 });
 
 test('connection is available outside both modes with a typeable address before the optional QR', () => {

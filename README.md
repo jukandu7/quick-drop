@@ -236,4 +236,16 @@ may report a connection error instead of displaying the rejection message.
 
 ## Built with
 
+HTTP handlers are grouped by responsibility: `HomeController` renders the dashboard
+and file snapshots; `UploadController`, `DownloadController`, `ReceivingController`,
+`FileManagementController`, and `QrController` own their respective routes.
+`ShareLinkService` owns storage consistency. Transfer payloads and exception handling
+are shared across controllers.
+
+Browser behavior lives under `src/main/resources/static/js`. The dashboard loads
+network, upload, and file-action helpers before `dashboard.js` initializes shared page
+state and listeners. These are ordered classic scripts; keep helper scripts before
+the initializer. `receive.js` handles the guest page and is loaded only for active
+receiving links. Server-rendered values remain in HTML attributes and metadata.
+
 Java, Spring Boot, Spring MVC, Thymeleaf, Spring Data JPA, H2, ZXing, and browser JavaScript.

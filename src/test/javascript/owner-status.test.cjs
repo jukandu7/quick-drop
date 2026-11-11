@@ -5,9 +5,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const template = fs.readFileSync(path.resolve(__dirname, '../../main/resources/templates/index.html'), 'utf8');
-const script = [...template.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
-    .map(match => match[1])
-    .find(source => source.includes('function applyLiveStatus('));
+const readScript = name => fs.readFileSync(path.resolve(__dirname, '../../main/resources/static/js/' + name), 'utf8');
+const script = readScript('dashboard.js');
+const network = readScript('dashboard-network.js');
+const files = readScript('dashboard-files.js');
 
 function sliceBetween(source, start, end) {
     const from = start ? source.indexOf(start) : 0;
@@ -19,8 +20,8 @@ function sliceBetween(source, start, end) {
 // Run the template's real initialization, status callbacks, and display/copy
 // helpers; upload, file-list polling, and click listeners are outside this test.
 const ownerSource = sliceBetween(script, null, '    if ("EventSource" in window)')
-    + sliceBetween(script, '    async function createShareLink(', '    async function copyText(')
-    + sliceBetween(script, '    async function copyText(', '    function scheduleAvailableFilesSync(');
+    + network
+    + sliceBetween(files, '    async function createShareLink(', '    function scheduleAvailableFilesSync(');
 
 function element() {
     return {
