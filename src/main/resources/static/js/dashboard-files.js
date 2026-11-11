@@ -245,6 +245,8 @@
         let sharedFileCount = 1;
         fileActionInProgress = true;
         updateFileControls();
+        shareResult.hidden = true;
+        shareFeedback.textContent = "";
         fileActionStatus.textContent = "Creating share link...";
 
         try {
@@ -284,12 +286,13 @@
             showShareResult(shareLink, sharedFileCount);
             lastShareTokens = new Set(tokens);
             shareFilesLabel.textContent = filenames.length === 1
-                    ? "File: " + filenames[0]
-                    : "Link for " + sharedFileCount + " selected files.";
+                    ? "Recipient downloads: " + filenames[0]
+                    : "Recipient downloads one ZIP containing " + sharedFileCount + " files:\n" + filenames.join("\n");
             try {
                 await copyText(shareLink);
             } catch (error) {
                 fileActionStatus.textContent = "Share link created. Copying was blocked; scan the QR code or copy the displayed link.";
+                shareFeedback.textContent = fileActionStatus.textContent;
                 showNotification("Share link created. Scan the QR code to use it.", 5000);
                 return;
             }
@@ -301,6 +304,7 @@
                     4000
             );
 
+            shareFeedback.textContent = "Download link copied. Send it to your recipient.";
             fileActionStatus.textContent = sharedFileCount === 1
                     ? "File link copied."
                     : "One link for " + sharedFileCount + " files copied.";
@@ -324,7 +328,8 @@
                 : "QR code for " + fileCount + " shared files";
         shareResult.hidden = false;
         updateConnectionTools();
-        shareResult.scrollIntoView({behavior: "smooth", block: "nearest"});
+        shareResult.focus({preventScroll: true});
+        shareResult.scrollIntoView({block: "nearest"});
     }
 
     function scheduleAvailableFilesSync() {

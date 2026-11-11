@@ -27,6 +27,7 @@
     const shareResult = document.getElementById("share-result");
     const shareQr = document.getElementById("share-qr");
     const shareUrl = document.getElementById("share-url");
+    const shareFeedback = document.getElementById("share-feedback");
     const shareFilesLabel = document.getElementById("share-files-label");
     const copyAgainButton = document.getElementById("copy-again");
     const receiveTools = document.getElementById("receive-tools");
@@ -256,14 +257,21 @@
         deleteFiles(getSelectedFileChoices());
     });
 
+    document.getElementById("close-share").addEventListener("click", () => {
+        shareResult.hidden = true;
+        shareSelectedButton.focus();
+    });
+
     copyAgainButton.addEventListener("click", async () => {
         if (lastShareUrl && shareBaseUrl && connectionState === "connected") {
             try {
                 await copyText(lastShareUrl);
                 fileActionStatus.textContent = "Share link copied.";
+                shareFeedback.textContent = "Download link copied. Send it to your recipient.";
                 showNotification();
             } catch (error) {
                 fileActionStatus.textContent = "Copying was blocked; scan the QR code or copy the displayed link.";
+                shareFeedback.textContent = fileActionStatus.textContent;
                 showNotification("Share link could not be copied. You can scan its QR code instead.", 5000);
             }
         }

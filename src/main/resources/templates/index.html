@@ -84,15 +84,7 @@
     Select files and download them to save a copy on this device.
 </p>
 
-<section id="share-result" hidden>
-    <h2>Ready to share</h2>
-    <img id="share-qr" alt="QR code for the share link">
-    <p>Open this link in another device's browser, or scan the QR code. Use the same local network.</p>
-    <p><a id="share-url" target="_blank" rel="noopener"></a></p>
-    <p id="share-files-label"></p>
-    <p id="share-network-status" hidden>Reconnect to Quick Drop to use this link.</p>
-    <button id="copy-again" type="button">Copy share link</button>
-</section>
+
 
 <p id="storage-status" th:text="${storageLabel}"></p>
 
@@ -109,12 +101,29 @@
         Download selected
     </button>
     <button id="share-selected" type="button" disabled>
-        Create share link
+        Share selected files
     </button>
     <span id="selection-status" role="status">0 selected</span>
     <p>Multiple files download as a ZIP.</p>
 </div>
 <p id="file-action-status" aria-live="polite"></p>
+<section id="share-result" aria-labelledby="share-heading" tabindex="-1" hidden>
+    <h2 id="share-heading">Share a download</h2>
+    <p id="share-files-label"></p>
+    <p>Anyone with this link can download the files listed here without your owner PIN. It does not let them browse your other files or upload anything.</p>
+    <p>Send the link to someone on the same local network. Keep the computer running Quick Drop on and connected.</p>
+    <p><a id="share-url" target="_blank" rel="noopener" aria-label="Open shared download"></a></p>
+    <button id="copy-again" type="button">Copy download link</button>
+    <p id="share-feedback" role="status"></p>
+    <p id="share-network-status" hidden>Reconnect to Quick Drop to use this link.</p>
+    <details id="share-qr-options">
+        <summary>Or scan a QR code</summary>
+        <img id="share-qr" alt="QR code for the download link">
+    </details>
+    <p class="share-lifetime">The link stops working when a shared file expires, is deleted or replaced, or its link is disabled.</p>
+    <button id="close-share" type="button">Close sharing panel</button>
+    <small>Closing this panel keeps the link active.</small>
+</section>
 
 <p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
     No files stored yet. Add files above or from another connected device; they’ll appear here automatically.

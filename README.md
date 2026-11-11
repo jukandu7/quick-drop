@@ -63,7 +63,7 @@ The default run configuration uses **unencrypted HTTP** for trusted local networ
 
 For someone who only needs to send files, expand **Let someone send files (optional)** and create a guest upload link. It can last 15 minutes, one hour, or 24 hours, and you can stop guest uploads early. Guests using this link cannot browse or download your stored files.
 
-To share downloads, select files in **Your files** and choose **Create share link**. Keep the host computer running and connected while links are in use.
+To share downloads, select files in **Your files** and choose **Share selected files**. The sharing panel lists what recipients can download and provides a copy button and optional QR code. Keep the host computer running and connected while links are in use.
 
 Replacing a file invalidates its previous download link and any combined links containing that version. To invalidate links without deleting files, select the files and choose **Revoke download links**. This also revokes combined links containing those files; their contents and expiration settings are preserved. Create fresh links afterward if needed. Revocation cannot remove copies already downloaded or retract bytes from a download that has already started.
 

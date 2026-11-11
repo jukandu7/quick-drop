@@ -539,3 +539,10 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .access-help, .access-summary { color: var(--muted); font-size: .8rem; font-weight: 400; }
 .access-help { margin: 8px 4px 16px; }
 .access-summary { display: block; margin-top: 4px; }
+
+#share-files-label { white-space: pre-line; max-height: 12rem; overflow: auto; overflow-wrap: anywhere; }
+#share-result p, #share-result small { font-size: .85rem; }
+#share-result small { display: block; margin-top: 6px; color: var(--muted); }
+#share-qr-options summary { cursor: pointer; padding: 12px 0; color: var(--accent); }
+#share-result { scroll-margin-top: 180px; }
+.share-lifetime { color: var(--muted); }

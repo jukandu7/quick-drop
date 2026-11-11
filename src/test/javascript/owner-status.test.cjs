@@ -33,6 +33,7 @@ function element() {
             delete this[name];
         },
         scrollIntoView() {},
+        focus() {},
         addEventListener() {}
     };
 }
@@ -361,7 +362,7 @@ for (const fileCount of [1, 2]) {
         assert.equal(page.node('file-action-status').textContent,
             'Share link created. Copying was blocked; scan the QR code or copy the displayed link.');
         assert.equal(page.node('share-files-label').textContent,
-            fileCount === 1 ? 'File: file-0.txt' : 'Link for 2 selected files.');
+            fileCount === 1 ? 'Recipient downloads: file-0.txt' : 'Recipient downloads one ZIP containing 2 files:\nfile-0.txt\nfile-1.txt');
         assert.deepEqual(page.clipboardWrites, []);
         assert.deepEqual(page.fallbackWrites, []);
         assert.equal(page.temporaryInputs[0].removed, true);
