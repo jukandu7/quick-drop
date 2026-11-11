@@ -258,9 +258,7 @@ public class HomeController {
     }
 
     @PostMapping("/send/upload")
-    public ResponseEntity<ReceiveUploadResult> senderUpload(
-            @RequestParam("file") MultipartFile file
-    ) {
+    public ResponseEntity<ReceiveUploadResult> senderUpload() {
         return ResponseEntity.status(HttpStatus.GONE)
                 .body(new ReceiveUploadResult(
                         "This old sender address is inactive. Scan the "

@@ -325,6 +325,7 @@ public class ShareLinkService {
         if (!Files.exists(uploadDirectory)) return 0;
         try (Stream<Path> paths = Files.walk(uploadDirectory, 2)) {
             return paths.filter(this::regular).filter(path -> !path.startsWith(uploadDirectory.resolve(".staging")))
+                    .filter(path -> !path.startsWith(uploadDirectory.resolve(".incoming")))
                     .mapToLong(this::size).sum();
         } catch (IOException exception) { throw new UncheckedIOException(exception); }
     }

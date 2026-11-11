@@ -156,6 +156,25 @@ node --test src/test/javascript/*.test.cjs
 
 ## Troubleshooting
 
+Uploads are admitted before multipart parsing: owner authentication, CSRF verification,
+and an active receiving link are required where applicable. The retired sender route
+and multipart bodies sent to other routes are rejected. Uploads allow at most two
+concurrent requests globally and one per direct client IP (forwarded headers are ignored).
+Busy requests return HTTP 429 with a retry delay.
+
+Temporary multipart files live in `uploads/.incoming`, on the same volume as staged
+files. The default temporary budget is 7 GiB, with 512 MiB of free disk space reserved.
+Admission accounts for both the multipart spool and the staging copy; chunked uploads
+reserve the maximum request size. Configure these with `quickdrop.upload.temp-budget`,
+`quickdrop.upload.minimum-free-space`, and `quickdrop.upload.max-concurrent`.
+The temporary budget must cover twice `spring.servlet.multipart.max-request-size`.
+Disk checks are conservative and cannot reserve space against other applications.
+Abandoned multipart files count against the budget; if necessary, stop Quick Drop
+before removing files from `.incoming`. Never remove completed files in `.versions`.
+Tomcat closes uploads after 30 seconds without incoming data; this is an idle timeout,
+not a total upload duration limit. Rejected bodies are not drained, so some clients
+may report a connection error instead of displaying the rejection message.
+
 - **Database file is locked:** stop the other Quick Drop instance, then run the app again. A subsequent Hibernate dialect error can be a consequence of that database lock.
 - **Port 8080 is already in use:** stop the process using it, or set `server.port` in `application.properties` and use that port in your browser.
 - **Another device cannot connect:** check that the host is running and both devices are on the same network. Allow Java through Windows Firewall on your trusted Private network. Guest Wi-Fi or client isolation can prevent devices from connecting to each other.
