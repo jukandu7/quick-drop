@@ -4,14 +4,13 @@ import com.example.quickdrop.receive.ReceiveLinkService;
 import com.example.quickdrop.share.ShareLinkService;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.quickdrop.config.TransferLimits;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.util.unit.DataSize;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -29,21 +28,13 @@ public class UploadProtection extends OncePerRequestFilter {
     private final Set<String> clients = new HashSet<>();
     private long reserved;
 
-    public UploadProtection(ReceiveLinkService links, ShareLinkService storage,
-            @Value("${spring.servlet.multipart.max-request-size:3073MB}") DataSize requestLimit,
-            @Value("${spring.servlet.multipart.max-file-size:3GB}") DataSize fileLimit,
-            @Value("${quickdrop.upload.temp-budget:7GB}") DataSize budget,
-            @Value("${quickdrop.upload.minimum-free-space:512MB}") DataSize freeReserve,
-            @Value("${quickdrop.upload.max-concurrent:2}") int concurrentLimit) throws IOException {
+    public UploadProtection(ReceiveLinkService links, ShareLinkService storage, TransferLimits limits) throws IOException {
         this.links = links;
-        this.requestLimit = requestLimit.toBytes();
-        this.fileLimit = fileLimit.toBytes();
-        this.budget = budget.toBytes();
-        this.freeReserve = freeReserve.toBytes();
-        this.concurrentLimit = concurrentLimit;
-        if (this.requestLimit <= 0 || this.requestLimit > Long.MAX_VALUE / 2 || this.fileLimit <= 0
-                || this.budget < 2 * this.requestLimit || this.freeReserve < 0 || concurrentLimit < 1)
-            throw new IllegalArgumentException("Invalid upload resource limits");
+        this.requestLimit = limits.requestSize().toBytes();
+        this.fileLimit = limits.fileSize().toBytes();
+        this.budget = limits.tempBudget().toBytes();
+        this.freeReserve = limits.minimumFreeSpace().toBytes();
+        this.concurrentLimit = limits.maxConcurrent();
         incoming = Files.createDirectories(storage.storageDirectory().toAbsolutePath().resolve(".incoming"));
     }
 

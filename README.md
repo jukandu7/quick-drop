@@ -156,6 +156,25 @@ node --test src/test/javascript/*.test.cjs
 
 ## Troubleshooting
 
+Transfer limits are validated together at startup in `TransferLimits`. Override these
+properties in your configuration; the servlet, storage service, and browser file-size
+checks use the same values, and displayed limit messages update automatically:
+
+| Property | Default |
+| --- | --- |
+| `spring.servlet.multipart.max-file-size` | `3GB` |
+| `spring.servlet.multipart.max-request-size` | `3073MB` |
+| `quickdrop.storage-quota` | `5GB` |
+| `quickdrop.upload.temp-budget` | `7GB` |
+| `quickdrop.upload.minimum-free-space` | `512MB` |
+| `quickdrop.upload.max-concurrent` | `2` |
+
+Sizes use binary multiples (1 KB = 1024 bytes). Request size includes multipart
+overhead, so leave room above the file limit. The storage quota must cover at least
+one maximum-size file, and the temporary budget must cover twice the request limit.
+Restart after changing configuration. Expiration and storage labels share formatting
+helpers; URL construction continues to use `PublicUrlService`.
+
 Use **Choose network address** on the owner dashboard to select a Wi-Fi, Ethernet,
 or VPN address. It opens a separate tab so current uploads can continue. Selection
 affects newly generated device, guest, and file links through the shared URL builder.

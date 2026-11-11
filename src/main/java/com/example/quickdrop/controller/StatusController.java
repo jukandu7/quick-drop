@@ -1,6 +1,7 @@
 package com.example.quickdrop.controller;
 
 import com.example.quickdrop.network.PublicUrlService;
+import com.example.quickdrop.presentation.DisplayFormats;
 import com.example.quickdrop.receive.ReceiveLinkService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -10,16 +11,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 
 @RestController
 public class StatusController {
 
-    private static final DateTimeFormatter EXPIRATION_FORMATTER =
-            DateTimeFormatter
-                    .ofPattern("MMM d, yyyy 'at' h:mm a")
-                    .withZone(ZoneId.systemDefault());
 
     private final ReceiveLinkService receiveLinkService;
     private final PublicUrlService publicUrls;
@@ -44,7 +39,7 @@ public class StatusController {
                         true,
                         "/receive/" + link.token(),
                         link.expiresAt(),
-                        "Expires " + EXPIRATION_FORMATTER.format(link.expiresAt())
+                        DisplayFormats.expiration(link.expiresAt())
                 );
 
         return ResponseEntity.ok()

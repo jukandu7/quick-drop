@@ -57,7 +57,7 @@ class SelectedDownloadTests {
                 mock(PublicUrlService.class),
                 mock(QrCodeService.class),
                 mock(OwnerAccessService.class),
-                mock(OwnerPinService.class)
+                mock(OwnerPinService.class), mock(com.example.quickdrop.config.TransferLimits.class)
         );
         when(shareLinkService.storageDirectory()).thenReturn(uploads);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();

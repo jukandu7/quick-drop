@@ -1,6 +1,8 @@
 package com.example.quickdrop.controller;
 
 import com.example.quickdrop.events.FileEventService;
+import com.example.quickdrop.config.TransferLimits;
+import com.example.quickdrop.presentation.DisplayFormats;
 import com.example.quickdrop.network.PublicUrlService;
 import com.example.quickdrop.qr.QrCodeService;
 import com.example.quickdrop.receive.ReceiveLinkService;
@@ -38,8 +40,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -49,10 +49,7 @@ import java.util.zip.ZipOutputStream;
 @Controller
 public class HomeController {
 
-    private static final DateTimeFormatter EXPIRATION_FORMATTER =
-            DateTimeFormatter
-                    .ofPattern("MMM d, yyyy 'at' h:mm a")
-                    .withZone(ZoneId.systemDefault());
+    private final TransferLimits limits;
 
     private final ShareLinkService shareLinkService;
     private final ReceiveLinkService receiveLinkService;
@@ -69,7 +66,7 @@ public class HomeController {
             PublicUrlService publicUrls,
             QrCodeService qrCodeService,
             OwnerAccessService ownerAccessService,
-            OwnerPinService ownerPinService
+            OwnerPinService ownerPinService, TransferLimits limits
     ) {
         this.shareLinkService = shareLinkService;
         this.receiveLinkService = receiveLinkService;
@@ -78,6 +75,7 @@ public class HomeController {
         this.qrCodeService = qrCodeService;
         this.ownerAccessService = ownerAccessService;
         this.ownerPinService = ownerPinService;
+        this.limits = limits;
     }
 
     @GetMapping("/")
@@ -341,7 +339,8 @@ public class HomeController {
     public ResponseEntity<UploadError> handleUploadTooLarge() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(new UploadError(
-                        "Upload rejected: files must be 3 GB or smaller."
+                        "Upload rejected: maximum file size is " + DisplayFormats.size(limits.fileSize().toBytes())
+                                + "; maximum request size is " + DisplayFormats.size(limits.requestSize().toBytes()) + "."
                 ));
     }
 
@@ -671,17 +670,11 @@ public class HomeController {
     }
 
     private String formatExpiration(Instant expiresAt) {
-        if (expiresAt == null) {
-            return "Never expires";
-        }
-
-        return "Expires " + EXPIRATION_FORMATTER.format(expiresAt);
+        return DisplayFormats.expiration(expiresAt);
     }
 
     private String formatStorage(long bytes) {
-        double megabytes = bytes / (1024.0 * 1024.0);
-
-        return String.format("%.1f MB of 5 GB used", megabytes);
+        return DisplayFormats.storage(bytes, limits.storageQuota().toBytes());
     }
 
     public record UploadResult(

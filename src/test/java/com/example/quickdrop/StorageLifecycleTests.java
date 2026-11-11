@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:storage-lifecycle")
 class StorageLifecycleTests {
     @Autowired ShareLinkService shares;
+    @Autowired com.example.quickdrop.config.TransferLimits limits;
     @Autowired ShareBundleRepository bundles;
     @Autowired PendingFileDeletionRepository pending;
     @Autowired PlatformTransactionManager transactions;
@@ -81,7 +82,7 @@ class StorageLifecycleTests {
         assertThat(files.count()).isZero();
         doCallRealMethod().when(disk).delete(legacy);
         // A new service instance has no in-memory state from the interrupted process.
-        var restarted = new ShareLinkService(files, bundles, pending, disk, events, transactions, uploads.toString());
+        var restarted = new ShareLinkService(files, bundles, pending, disk, events, transactions, uploads.toString(), limits);
         restarted.recoverStorage();
         assertThat(Files.exists(legacy)).isFalse();
         assertThat(pending.count()).isZero();
@@ -136,7 +137,7 @@ class StorageLifecycleTests {
         Path partial = uploads.resolve(".staging/interrupted.part");
         Files.writeString(partial, "partial");
         Files.writeString(uploads.resolve("untracked-legacy.txt"), "do not publish");
-        var restarted = new ShareLinkService(files, bundles, pending, disk, events, transactions, uploads.toString());
+        var restarted = new ShareLinkService(files, bundles, pending, disk, events, transactions, uploads.toString(), limits);
         restarted.recoverStorage();
         assertThat(restarted.findFile(keep.token())).isPresent();
         assertThat(files.findById(missing.token())).isEmpty();

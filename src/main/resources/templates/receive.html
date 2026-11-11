@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta id="upload-limit" th:content="${maxFileSizeBytes}" th:data-label="${maxFileSizeLabel}">
     <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Send files to Quick Drop</title>
@@ -196,7 +197,8 @@
     const connectionHelp = document.getElementById("receive-connection-help");
     const sessionEndedMessage = document.getElementById("receive-session-ended");
     const sessionExpiration = document.getElementById("receive-session-expiration");
-    const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024 * 1024;
+    const MAX_FILE_SIZE_BYTES = Number(document.getElementById("upload-limit").content);
+    const MAX_FILE_SIZE_LABEL = document.getElementById("upload-limit").dataset.label;
     let uploadInProgress = false;
     let uploadBatch = null;
     let receivingSessionEnded = false;
@@ -420,7 +422,7 @@
                     outcome = {
                         success: false,
                         retryable: false,
-                        message: "Too large — 3 GB maximum. Choose a smaller file."
+                        message: "Too large — " + MAX_FILE_SIZE_LABEL + " maximum. Choose a smaller file."
                     };
                 } else if (file.size === 0) {
                     outcome = {

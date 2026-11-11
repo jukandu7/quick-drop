@@ -22,8 +22,9 @@ class UploadProtectionTests {
     @BeforeEach void setup() throws Exception {
         ShareLinkService storage = mock(ShareLinkService.class);
         when(storage.storageDirectory()).thenReturn(root);
-        guard = new UploadProtection(links, storage, DataSize.ofBytes(1000), DataSize.ofBytes(900),
-                DataSize.ofBytes(2200), DataSize.ofBytes(0), 2);
+        guard = new UploadProtection(links, storage, new com.example.quickdrop.config.TransferLimits(
+                DataSize.ofBytes(900), DataSize.ofBytes(1000), DataSize.ofBytes(2000),
+                DataSize.ofBytes(2200), DataSize.ofBytes(0), 2));
     }
 
     MockHttpServletRequest request(String path, String ip, int size) {

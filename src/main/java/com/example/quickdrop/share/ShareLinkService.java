@@ -1,6 +1,8 @@
 package com.example.quickdrop.share;
 
 import com.example.quickdrop.events.FileEventService;
+import com.example.quickdrop.config.TransferLimits;
+import com.example.quickdrop.presentation.DisplayFormats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,8 +31,7 @@ import java.util.stream.Stream;
 @Service
 public class ShareLinkService {
     private static final Logger log = LoggerFactory.getLogger(ShareLinkService.class);
-    private static final long MAX_FILE_SIZE = 3L * 1024 * 1024 * 1024;
-    private static final long MAX_STORAGE = 5L * 1024 * 1024 * 1024;
+    private final TransferLimits limits;
     private final SharedFileRepository repository;
     private final ShareBundleRepository bundleRepository;
     private final PendingFileDeletionRepository pendingDeletes;
@@ -47,7 +48,8 @@ public class ShareLinkService {
     public ShareLinkService(SharedFileRepository repository, ShareBundleRepository bundleRepository,
                             PendingFileDeletionRepository pendingDeletes, StorageFileOperations disk,
                             FileEventService events, PlatformTransactionManager transactionManager,
-                            @Value("${quickdrop.storage-directory:uploads}") String directory) {
+                            @Value("${quickdrop.storage-directory:uploads}") String directory, TransferLimits limits) {
+        this.limits = limits;
         this.repository = repository;
         this.bundleRepository = bundleRepository;
         this.pendingDeletes = pendingDeletes;
@@ -95,8 +97,8 @@ public class ShareLinkService {
                                     boolean renameDuplicate) throws IOException {
         if (file.isEmpty() || file.getOriginalFilename() == null || file.getOriginalFilename().isBlank())
             throw new UploadRejected(400, "Please select a file.", null);
-        if (file.getSize() > MAX_FILE_SIZE)
-            throw new UploadRejected(413, "Upload rejected: files must be 3 GB or smaller.", null);
+        if (file.getSize() > limits.fileSize().toBytes())
+            throw new UploadRejected(413, "Upload rejected: files must be " + DisplayFormats.size(limits.fileSize().toBytes()) + " or smaller.", null);
         String originalName;
         try {
             originalName = Path.of(file.getOriginalFilename()).getFileName().toString();
@@ -138,8 +140,8 @@ public class ShareLinkService {
                             throw new UploadRejected(409, "A file named " + name + " already exists.", name);
                         long previousSize = old != null && regular(pathFor(old)) ? size(pathFor(old)) : 0;
                         long projected = usedBytes() - previousSize + file.getSize();
-                        if (projected > MAX_STORAGE)
-                            throw new UploadRejected(507, "Upload rejected: Quick Drop's 5 GB storage limit would be exceeded.", null);
+                        if (projected > limits.storageQuota().toBytes())
+                            throw new UploadRejected(507, "Upload rejected: Quick Drop's " + DisplayFormats.size(limits.storageQuota().toBytes()) + " storage limit would be exceeded.", null);
                         try {
                             Files.createDirectories(destination.getParent());
                             disk.move(staged, destination);
