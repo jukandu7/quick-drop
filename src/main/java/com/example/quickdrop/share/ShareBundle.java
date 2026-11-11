@@ -41,8 +41,4 @@ public class ShareBundle {
         return fileTokens;
     }
 
-    public void replaceFileTokens(List<String> fileTokens) {
-        this.fileTokens.clear();
-        this.fileTokens.addAll(fileTokens);
-    }
 }

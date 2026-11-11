@@ -156,6 +156,14 @@ node --test src/test/javascript/*.test.cjs
 
 ## Troubleshooting
 
+Startup recovery and the one-minute recovery job remove stale bundle records and
+their member rows. Empty, single-file, duplicate-member, or missing-member bundles
+are invalid; valid bundles remain available without an arbitrary age limit.
+Incomplete bundles return 404 even before cleanup, rather than downloading a partial
+set of files. The legacy `/send` page remains a 410 compatibility notice directing
+users to a current receiving link. `/send/upload` rejects requests before multipart
+parsing, so old clients cannot upload through it.
+
 Transfer limits are validated together at startup in `TransferLimits`. Override these
 properties in your configuration; the servlet, storage service, and browser file-size
 checks use the same values, and displayed limit messages update automatically:

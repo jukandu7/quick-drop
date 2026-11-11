@@ -34,6 +34,7 @@ class StorageLifecycleTests {
     @Autowired ShareBundleRepository bundles;
     @Autowired PendingFileDeletionRepository pending;
     @Autowired PlatformTransactionManager transactions;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoSpyBean SharedFileRepository files;
     @MockitoSpyBean StorageFileOperations disk;
     @MockitoBean FileEventService events;
@@ -343,6 +344,62 @@ class StorageLifecycleTests {
             assertThat(deletion.get(5, TimeUnit.SECONDS)).containsExactly(file.token());
             assertThat(shares.snapshot().files()).isEmpty();
         }
+    }
+
+    @Test
+    void recoveryRemovesOrphanedAndMalformedBundlesWithoutExpiringValidLinks() throws Exception {
+        var first = upload("one.txt", "one", false);
+        var second = upload("two.txt", "two", false);
+        var valid = shares.createBundle(List.of(first.token(), second.token())).orElseThrow();
+        bundles.saveAndFlush(new ShareBundle("empty", List.of()));
+        bundles.saveAndFlush(new ShareBundle("single", List.of(first.token())));
+        bundles.saveAndFlush(new ShareBundle("orphan", List.of("missing-a", "missing-b")));
+        bundles.saveAndFlush(new ShareBundle("partial", List.of(first.token(), "missing-b")));
+        bundles.saveAndFlush(new ShareBundle("duplicates", List.of(first.token(), second.token(), first.token())));
+
+        assertThat(shares.findBundleFiles("partial")).isEmpty();
+        assertThat(shares.findBundleFiles("duplicates")).isEmpty();
+        assertThat(bundles.existsById("partial")).isTrue(); // Reads do not mutate metadata.
+        shares.recoverStorage();
+        shares.recoverStorage();
+
+        assertThat(bundles.count()).isEqualTo(1);
+        assertThat(shares.findBundleFiles(valid.token())).hasSize(2);
+        assertThat(jdbc.queryForObject("select count(*) from share_bundle_files", Long.class)).isEqualTo(2);
+        assertThat(files.count()).isEqualTo(2);
+    }
+
+    @Test
+    void recoveryRevokesBundlesWithExpiredOrMissingPhysicalFiles() throws Exception {
+        var first = upload("one.txt", "one", false);
+        var expired = upload("expired.txt", "old", false);
+        var missing = upload("missing.txt", "missing", false);
+        var expiredBundle = shares.createBundle(List.of(first.token(), expired.token())).orElseThrow();
+        var missingBundle = shares.createBundle(List.of(first.token(), missing.token())).orElseThrow();
+        var row = files.findById(expired.token()).orElseThrow();
+        row.setExpiresAt(Instant.now().minusSeconds(1));
+        files.saveAndFlush(row);
+        Files.delete(shares.findFile(missing.token()).orElseThrow().path());
+
+        assertThat(shares.findBundleFiles(expiredBundle.token())).isEmpty();
+        assertThat(shares.findBundleFiles(missingBundle.token())).isEmpty();
+        shares.recoverStorage();
+        assertThat(bundles.count()).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from share_bundle_files", Long.class)).isZero();
+        assertThat(shares.findFile(first.token())).isPresent();
+    }
+
+    @Test
+    void failedRecoveryReadPreservesBundleMetadata() throws Exception {
+        var first = upload("one.txt", "one", false);
+        var second = upload("two.txt", "two", false);
+        var valid = shares.createBundle(List.of(first.token(), second.token())).orElseThrow();
+        bundles.saveAndFlush(new ShareBundle("orphan", List.of("missing-a", "missing-b")));
+        doThrow(new org.springframework.dao.DataAccessResourceFailureException("database unavailable"))
+                .when(files).findAll();
+        shares.recoverStorage();
+        assertThat(bundles.existsById(valid.token())).isTrue();
+        assertThat(bundles.existsById("orphan")).isTrue();
     }
 
     private static void await(CountDownLatch latch) throws IOException {

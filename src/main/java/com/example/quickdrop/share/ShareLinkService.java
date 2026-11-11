@@ -230,9 +230,16 @@ public class ShareLinkService {
     }
 
     public List<FileReference> findBundleFiles(String token) {
-        return read(() -> bundleRepository.findById(token).map(bundle -> bundle.getFileTokens().stream()
-                .map(repository::findById).flatMap(Optional::stream).filter(this::available)
-                .map(this::reference).toList()).orElse(List.of()));
+        return read(() -> bundleRepository.findById(token).map(bundle -> {
+            List<String> tokens = bundle.getFileTokens();
+            int uniqueCount = new HashSet<>(tokens).size();
+            if (uniqueCount < 2 || uniqueCount != tokens.size()) return List.<FileReference>of();
+            List<FileReference> files = tokens.stream().map(repository::findById)
+                    .flatMap(Optional::stream).filter(this::available).map(this::reference).toList();
+            // A bundle promises the selected set. Never silently serve a partial set
+            // while waiting for scheduled recovery to remove stale metadata.
+            return files.size() == tokens.size() ? files : List.<FileReference>of();
+        }).orElse(List.of()));
     }
 
     public void deleteExpiredFiles() {
@@ -254,6 +261,20 @@ public class ShareLinkService {
         bundleRepository.deleteAll(bundleRepository.findContainingTokens(tokens));
     }
 
+    private void removeStaleBundles() {
+        // Called inside the recovery transaction and write lock, after file cleanup.
+        // Missing/expired files have already been removed there. Do not interpret
+        // an indeterminate filesystem check as proof that a file is gone.
+        Set<String> knownTokens = repository.findAll().stream().map(SharedFile::getToken)
+                .collect(java.util.stream.Collectors.toSet());
+        List<ShareBundle> stale = bundleRepository.findAll().stream().filter(bundle -> {
+            Set<String> tokens = new HashSet<>(bundle.getFileTokens());
+            return tokens.size() < 2 || tokens.size() != bundle.getFileTokens().size()
+                    || !knownTokens.containsAll(tokens);
+        }).toList();
+        bundleRepository.deleteAll(stale);
+    }
+
     /** Idempotent recovery runs on startup and periodically thereafter. */
     @EventListener(ApplicationReadyEvent.class)
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
@@ -266,6 +287,7 @@ public class ShareLinkService {
                         (file.getExpiresAt() != null && !file.getExpiresAt().isAfter(Instant.now()))
                                 || Files.notExists(pathFor(file), LinkOption.NOFOLLOW_LINKS))
                         .forEach(this::removeMetadata);
+                removeStaleBundles();
                 return null;
             });
             Set<Path> referenced = read(() -> repository.findAll().stream().map(this::pathFor)
