@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="dashboard-page" th:attr="data-share-base-url=${shareBaseUrl}">
+<a class="skip-link" href="#main-content">Skip to file transfers</a>
 <div class="dashboard-shell">
 <header class="dashboard-header">
     <a class="brand" href="/" aria-label="Quick Drop home"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</a>
@@ -33,7 +34,7 @@
 </div>
 <p id="pin-notice" role="status" aria-live="polite"
    th:if="${pinNotice}" th:text="${pinNotice}"></p>
-<main class="dashboard-grid">
+<main id="main-content" class="dashboard-grid" tabindex="-1">
 <div class="transfer-workspace">
 <div id="mode-switch" role="group" aria-label="Transfer mode">
     <button id="send-mode-button" type="button" aria-pressed="true" aria-controls="send-panel">Send files</button>
@@ -125,7 +126,7 @@
     No files here yet. Send files from any connected device and they’ll appear here.
 </p>
 
-<ul id="files-list">
+<ul id="files-list" aria-label="Available files">
     <li th:each="file : ${files}"
         th:attr="data-share-token=${file.shareToken},data-expires-at=${file.expiresAt}">
         <input type="checkbox"

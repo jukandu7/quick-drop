@@ -88,6 +88,8 @@
             if (row.hidden) choice.checked = false;
             row.classList.toggle("is-selected", choice.checked);
         });
+        const originalOrder = [...choices];
+        const focused = document.activeElement;
         choices.sort((a, b) => {
             if (fileSort.value === "expiration") {
                 const expiry = choice => Date.parse(choice.closest("li").dataset.expiresAt) || Infinity;
@@ -96,9 +98,16 @@
             }
             const order = a.dataset.filename.localeCompare(b.dataset.filename, undefined, {numeric: true, sensitivity: "base"});
             return fileSort.value === "name-desc" ? -order : order;
-        }).forEach(choice => filesList.appendChild(choice.closest("li")));
+        });
+        if (choices.some((choice, index) => choice !== originalOrder[index])) {
+            choices.forEach(choice => filesList.appendChild(choice.closest("li")));
+            if (focused && filesList.contains(focused) && !focused.closest("li").hidden) {
+                focused.focus({preventScroll: true});
+            }
+        }
         const visible = getVisibleFileChoices().length;
-        fileResults.textContent = visible + " of " + choices.length + " files";
+        const resultMessage = visible + " of " + choices.length + " files";
+        if (fileResults.textContent !== resultMessage) fileResults.textContent = resultMessage;
         noMatches.hidden = choices.length === 0 || visible !== 0;
     }
 
@@ -112,7 +121,8 @@
         selectAllButton.hidden = fileActions.hidden;
         document.getElementById("file-management").hidden = fileActions.hidden;
         emptyMessage.hidden = getFileChoices().length !== 0;
-        selectionStatus.textContent = selectedCount + " selected";
+        const selectionMessage = selectedCount + " selected";
+        if (selectionStatus.textContent !== selectionMessage) selectionStatus.textContent = selectionMessage;
         shareSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0 || connectionState !== "connected" || !shareBaseUrl;
         downloadSelectedButton.disabled = fileActionInProgress

@@ -41,7 +41,7 @@
             <input th:if="${configured}" id="current-pin" class="pin-input"
                    name="currentPin" type="password" inputmode="numeric"
                    pattern="[0-9]{4}" minlength="4" maxlength="4"
-                   autocomplete="current-password" required>
+                   autocomplete="current-password" th:attr="aria-invalid=${error != null},aria-describedby=${error != null ? 'pin-error' : null}" required>
             <label for="pin">New owner PIN</label>
             <input id="pin"
                    class="pin-input"

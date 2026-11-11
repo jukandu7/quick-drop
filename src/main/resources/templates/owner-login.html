@@ -39,15 +39,14 @@
                    minlength="4"
                    maxlength="4"
                    autocomplete="current-password"
-                   aria-describedby="login-pin-help"
-                   th:attr="aria-invalid=${error != null}"
+                   th:attr="aria-invalid=${error != null},aria-describedby=${error != null ? 'login-pin-help login-error' : 'login-pin-help'}"
                    autofocus
                    required>
             <small id="login-pin-help">Enter exactly four digits.</small>
             <button type="submit">Open owner dashboard</button>
         </form>
 
-        <p class="error"
+        <p id="login-error" class="error"
            role="alert"
            th:if="${error}"
            th:text="${error}"></p>
