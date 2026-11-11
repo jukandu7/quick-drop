@@ -8,9 +8,11 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="auth-page">
+<p class="brand"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</p>
 <div th:replace="~{fragments/transport :: notice}"></div>
 <main>
-    <h1>Quick Drop owner access</h1>
+    <p class="eyebrow">YOUR DEVICES, CONNECTED</p>
+    <h1>Welcome back.</h1>
 
     <div th:if="${setupRequired}">
         <p>
@@ -37,9 +39,11 @@
                    minlength="4"
                    maxlength="4"
                    autocomplete="current-password"
+                   aria-describedby="login-pin-help"
+                   th:attr="aria-invalid=${error != null}"
                    autofocus
                    required>
-            <small>Enter exactly four digits.</small>
+            <small id="login-pin-help">Enter exactly four digits.</small>
             <button type="submit">Open owner dashboard</button>
         </form>
 

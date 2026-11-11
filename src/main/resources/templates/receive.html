@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="sender-page">
+<p class="brand sender-brand"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</p>
 <div th:replace="~{fragments/transport :: notice}"></div>
 <main class="sender-shell">
 <header>
@@ -42,11 +43,13 @@
           enctype="multipart/form-data">
     <input type="hidden" name="_csrf" th:value="${csrfToken}">
         <div id="receive-drop-zone" tabindex="0">
+            <span class="upload-symbol" aria-hidden="true">↑</span>
             <strong>Drop one or more files here</strong>
-            <p>or</p>
+            <p>Or choose files from this device.</p>
             <button id="receive-browse-files" type="button">
                 Choose files
             </button>
+            <small class="upload-limit" th:text="|Up to ${maxFileSizeLabel} per file · uploads start automatically|">Uploads start automatically</small>
             <input id="receive-file"
                    type="file"
                    name="file"

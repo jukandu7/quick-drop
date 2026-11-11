@@ -7,14 +7,18 @@
     <title>Network address — Quick Drop</title>
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-<body>
+<body class="settings-page">
+<header class="settings-header">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</a>
+    <a href="/">← Dashboard</a>
+</header>
 <main>
+    <p class="eyebrow">CONNECTION SETTINGS</p>
     <h1>Network address</h1>
-    <p><a href="/">Back to dashboard</a></p>
     <p>Choose the address reachable by your other devices. Wi-Fi, Ethernet, and VPN connections can have different addresses.</p>
-    <p th:if="${notice}" th:text="${notice}" role="status"></p>
-    <p th:if="${error}" th:text="${error}" role="alert"></p>
-    <p>Current share address: <strong th:text="${currentUrl ?: 'No available address'}"></strong></p>
+    <p class="settings-notice" th:if="${notice}" th:text="${notice}" role="status"></p>
+    <p class="error" th:if="${error}" th:text="${error}" role="alert"></p>
+    <div class="current-address"><span>Current share address</span><strong th:text="${currentUrl ?: 'No available address'}"></strong></div>
     <p th:if="${publicOverride}">A configured public base URL controls your links. Change QUICKDROP_PUBLIC_BASE_URL and restart to use another address.</p>
     <form th:unless="${publicOverride}" action="/owner/network" method="post">
         <input type="hidden" name="_csrf" th:value="${csrfToken}">
@@ -29,9 +33,12 @@
         <button type="submit">Use address</button>
     </form>
     <p th:if="${selectionMissing}">Your selected adapter address is unavailable. Reconnect it or choose another address.</p>
-    <p>Selections apply until Quick Drop restarts. Set QUICKDROP_NETWORK_ADDRESS before starting the app to keep a preferred address across restarts.</p>
+    <p class="field-hint">Your selection applies until Quick Drop restarts.</p>
+    <details class="network-guidance"><summary>Keeping your devices connected</summary>
+    <p>Set QUICKDROP_NETWORK_ADDRESS before starting the app to keep a preferred address across restarts.</p>
     <p>Automatic selection cannot guarantee reachability. Check the displayed link on another device. For HTTPS, the selected address must be covered by your certificate.</p>
     <p>Previously copied links keep their original address. Generate new links after changing networks.</p>
+    </details>
 </main>
 </body>
 </html>

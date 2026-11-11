@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body class="auth-page">
+<p class="brand"><span class="brand-mark" aria-hidden="true">↗</span> Quick Drop</p>
 <div th:replace="~{fragments/transport :: notice}"></div>
 <main>
+    <p class="eyebrow">OWNER ACCESS</p>
     <div th:unless="${localRequest}">
         <h1>Finish setup on the laptop</h1>
         <p>

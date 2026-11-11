@@ -415,3 +415,54 @@ body.dashboard-page { margin: 0; background: #10141b; }
 @media (prefers-reduced-motion: reduce) {
     .dashboard-page button, #copy-notification { transition: none; }
 }
+
+/* Companion pages share the dashboard's spacing and control treatment. */
+body.auth-page { max-width: 480px; margin: 40px auto; padding: 0 20px; }
+.auth-page > .brand { margin: 0 0 26px; }
+.auth-page main, .settings-page main { background: #171e28; border: 1px solid #303a4a; border-radius: 18px; padding: 30px; }
+.auth-page h1, .settings-page h1, .sender-shell h1 { font-size: clamp(1.65rem, 4vw, 2rem); letter-spacing: -0.035em; margin: 0 0 16px; }
+.auth-page main p, .settings-page main p, .sender-shell header > p:not(.sender-label) { font-size: 0.9rem; color: var(--muted); overflow-wrap: anywhere; }
+.auth-page main .eyebrow, .settings-page main .eyebrow { color: var(--accent); font-size: 0.7rem; }
+.auth-page form { gap: 10px; margin: 26px 0; }
+.auth-page label, .settings-page label { font-size: 0.85rem; font-weight: 550; }
+.auth-page .pin-input { max-width: 100%; min-height: 52px; font-size: 1.3rem; letter-spacing: 0.45em; text-align: left; padding-left: 18px; border-radius: 9px; background: #10161f; }
+.auth-page small { font-size: 0.8rem; color: var(--muted); }
+.auth-page button, .settings-page button, #receive-browse-files { background: #b6d5ff; color: #102039; border: 1px solid #b6d5ff; min-height: 46px; border-radius: 9px; padding: 11px 18px; font-weight: 600; }
+.auth-page button:hover:not(:disabled), .settings-page button:hover:not(:disabled), #receive-browse-files:hover:not(:disabled) { background: #d2e5ff; }
+.auth-page main .error, .settings-page main .error { color: #ffb6ae; background: #352126; border: 1px solid #76514f; border-radius: 9px; padding: 12px 14px; }
+.auth-page input[aria-invalid="true"] { border-color: #e08e86; }
+.auth-page .transport-notice { font-size: 0.8rem; margin-bottom: 20px; }
+.sender-brand { max-width: 640px; margin: 0 auto 24px; }
+.sender-page > .transport-notice { box-sizing: border-box; margin: 0 auto 20px; font-size: 0.8rem; }
+.sender-shell { background: #171e28; border-color: #303a4a; border-radius: 18px; }
+.sender-shell .sender-label { font-size: 0.7rem; letter-spacing: 0.16em; margin-top: 0; }
+.sender-boundary { font-size: 0.8rem; background: #202e40; border-radius: 0 8px 8px 0; }
+#receive-connection-status { font-size: 0.8rem; border: 1px solid #39465a; border-radius: 9px; padding: 10px 12px; background: #1b2431; }
+#receive-session-expiration, #receive-connection-help, #receive-retry-note { color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
+#receive-session-expiration strong { font-weight: 400; }
+#receive-drop-zone { border-width: 1px; border-color: #526782; background: #121a26; border-radius: 12px; }
+#receive-drop-zone strong { font-weight: 550; }
+#receive-drop-zone p { color: var(--muted); font-size: 0.85rem; }
+.receive-upload-item { min-width: 0; padding: 15px; border: 1px solid #334154; background: #121a25; border-radius: 10px; overflow-wrap: anywhere; font-size: 0.85rem; }
+.receive-upload-item progress { accent-color: #b6d5ff; height: 7px; }
+#receive-upload-status:empty { display: none; }
+#receive-session-ended { padding: 12px; border: 1px solid #8a713a; background: #352c18; color: #ffe2a1; border-radius: 9px; }
+body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
+.settings-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.settings-header > a:last-child { font-size: 0.85rem; text-decoration: none; }
+.settings-page form { display: grid; gap: 12px; margin-top: 24px; }
+.settings-page select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 48px; padding: 10px; font-size: 1rem; border-radius: 9px; }
+.current-address { background: #10161f; border: 1px solid #34435a; border-radius: 10px; padding: 16px; margin: 24px 0; }
+.current-address span { display: block; color: var(--muted); font-size: 0.75rem; margin-bottom: 6px; }
+.current-address strong { font-family: ui-monospace, Consolas, monospace; font-size: 0.95rem; font-weight: 500; overflow-wrap: anywhere; }
+.settings-page main .settings-notice { color: #b4f0ca; border: 1px solid #508d65; background: #183e2b; padding: 12px; border-radius: 9px; }
+.network-guidance { border-top: 1px solid #303a4a; padding-top: 18px; margin-top: 26px; font-size: 0.85rem; }
+.network-guidance summary { cursor: pointer; color: var(--accent); padding: 6px 0; }
+@media (max-width: 520px) {
+    body.auth-page, body.settings-page { margin: 24px auto; padding: 0 16px; }
+    body.sender-page { padding: 24px 16px; }
+    .auth-page main, .settings-page main, .sender-shell { padding: 22px 18px; }
+    .settings-header { flex-wrap: wrap; }
+    #receive-browse-files { width: 100%; }
+    #receive-drop-zone { padding: 24px 14px; }
+}
