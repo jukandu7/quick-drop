@@ -555,3 +555,8 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .inline-help { margin-top: 12px; font-size: .8rem; color: var(--muted); }
 .inline-help summary { cursor: pointer; color: var(--accent); padding: 12px 0; }
 .inline-help p { margin: 8px 0; }
+
+.next-action { display: inline-block; padding: 10px 0; font-weight: 550; }
+#empty-message .next-action { display: block; }
+#retry-connection { margin-top: 8px; }
+#your-files-heading, #add-files-heading { scroll-margin-top: 20px; }

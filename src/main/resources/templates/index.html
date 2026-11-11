@@ -29,6 +29,7 @@
 <div class="connection-summary">
 <p id="connection-status" role="status" aria-live="polite">Checking connection...</p>
 <p id="connection-help" hidden></p>
+<button id="retry-connection" type="button" hidden>Check connection again</button>
 <p id="owner-unlock" hidden><a href="/owner/login">Unlock owner dashboard</a></p>
 </div>
 </div>
@@ -37,7 +38,7 @@
 <main id="main-content" class="dashboard-grid" tabindex="-1">
 <div class="transfer-workspace">
 <section id="add-files-panel" aria-labelledby="add-files-heading">
-<h2 id="add-files-heading">Add files</h2>
+<h2 id="add-files-heading" tabindex="-1">Add files</h2>
 <p class="section-description">Files are stored on the computer running Quick Drop. Your originals stay on this device.</p>
 
 <form id="upload-form"
@@ -74,6 +75,7 @@
 <div id="upload-activity" role="region" aria-label="Upload progress">
 <div id="upload-queue"></div>
 <p id="upload-status" aria-live="polite"></p>
+<a id="view-uploaded-files" class="next-action" href="#your-files-heading" hidden>View uploaded files</a>
 <button id="retry-failed" type="button" hidden>Retry failed</button>
 <p id="retry-note" hidden>
     Failed files can be retried while this page stays open.
@@ -82,7 +84,7 @@
 </div>
 
 <section id="your-files-panel" aria-labelledby="your-files-heading">
-<h2 id="your-files-heading">Your files</h2>
+<h2 id="your-files-heading" tabindex="-1">Your files</h2>
 <p id="storage-status" th:text="${storageLabel}"></p>
 
 <div class="file-browser-tools">
@@ -91,7 +93,7 @@
 </div>
 <p id="filter-help">Filtering clears selections outside the results.</p>
 <p id="file-results" role="status"></p>
-<p id="no-matches" hidden>No matching files. Try another filename or clear your search.</p>
+<p id="no-matches" hidden>No matching files. <button id="clear-file-search" type="button">Clear search</button></p>
 <button id="select-all" type="button" th:hidden="${#lists.isEmpty(files)}">Select all shown</button>
 <div id="file-actions" role="group" aria-label="Actions for selected files" th:hidden="${#lists.isEmpty(files)}">
     <div class="selection-summary">
@@ -129,7 +131,7 @@
 </section>
 
 <p id="empty-message" th:hidden="${!#lists.isEmpty(files)}">
-    No files stored yet. Add files above or from another connected device; they’ll appear here automatically.
+    No files stored yet. <a class="next-action" href="#add-files-heading">Add your first files</a>
 </p>
 
 <ul id="files-list" aria-label="Available files">

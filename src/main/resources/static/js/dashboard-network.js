@@ -11,10 +11,8 @@
         connectionStatus.textContent = labels[state];
         connectionStatus.dataset.state = state;
         connectionHelp.hidden = !["reconnecting", "unavailable"].includes(state);
-        connectionHelp.textContent = "Keep Quick Drop running on the host computer. "
-                + "If the Wi-Fi changed, open " + (window.location.protocol || "http:") + "//localhost"
-                + (window.location.port ? ":" + window.location.port : "") + " on that computer "
-                + "and open its updated address or QR code on your other device.";
+        connectionHelp.textContent = "Open Quick Drop on the computer storing your files. We’ll reconnect automatically. If its network changed, use the updated address under Connect your own device.";
+        document.getElementById("retry-connection").hidden = !["reconnecting", "unavailable"].includes(state);
         ownerUnlock.hidden = state !== "locked";
         updateConnectionTools();
         if (state === "connected") scheduleAvailableFilesSync();
@@ -152,6 +150,7 @@
             if (lastReceiveUrl && connectionState === "connected") {
                 try {
                     await copyText(lastReceiveUrl);
+                    receiveStatus.textContent = "Upload link copied. Send it to the person who will upload files.";
                 } catch (error) {
                     receiveStatus.textContent = "Upload link is ready. Link could not be copied; scan the upload QR code instead.";
                 }

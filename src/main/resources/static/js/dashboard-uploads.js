@@ -28,6 +28,7 @@
             return;
         }
 
+        document.getElementById("view-uploaded-files").hidden = true;
         uploadInProgress = true;
         browseFilesButton.disabled = true;
         expirationSelect.disabled = true;
@@ -84,7 +85,8 @@
             }
         } finally {
             finishUploadProgress(row, uploadBatch);
-            uploadStatus.textContent = uploadBatch.summary();
+            uploadStatus.textContent = uploadBatch.summary() + " " + uploadBatch.nextStep();
+            document.getElementById("view-uploaded-files").hidden = !uploadBatch.entries.some(entry => entry.status === "uploaded");
             const retryCount = uploadBatch.retryableEntries().length;
             retryFailedButton.textContent = "Retry failed (" + retryCount + ")";
             retryFailedButton.hidden = retryCount === 0;

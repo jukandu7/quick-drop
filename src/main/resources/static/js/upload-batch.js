@@ -39,6 +39,14 @@ class UploadBatch {
         return this.entries.some(entry => entry.status === "failed");
     }
 
+    nextStep(owner = true) {
+        if (this.retryableEntries().length) return "Check whether interrupted files arrived, then use Retry failed.";
+        if (this.hasFailures()) return "Review the file results below, then choose corrected files to try again.";
+        if (!this.entries.some(entry => entry.status === "uploaded")) return "No new files were uploaded. Choose files to try again.";
+        return owner ? "Open Your files below to download or share the uploaded files."
+                : "Your files are saved on the owner’s computer. Let the owner know they’re ready.";
+    }
+
     summary() {
         const count = status => this.entries
                 .filter(entry => entry.status === status).length;

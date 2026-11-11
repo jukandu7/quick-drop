@@ -287,7 +287,7 @@
                 finishUploadProgress(row, uploadBatch);
             }
 
-            uploadStatus.textContent = uploadBatch.summary();
+            uploadStatus.textContent = uploadBatch.summary() + " " + uploadBatch.nextStep(false);
             updateReceivingControls();
         }
     }

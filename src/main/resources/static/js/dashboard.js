@@ -133,7 +133,7 @@
         if (lastReceiveUrl && connectionState === "connected") {
             try {
                 await copyText(lastReceiveUrl);
-                receiveStatus.textContent = "Upload link copied.";
+                receiveStatus.textContent = "Upload link copied. Send it to the person who will upload files.";
                 showNotification("Upload link copied!");
             } catch (error) {
                 showNotification("Upload link could not be copied. You can scan its QR code instead.", 5000);
@@ -229,6 +229,13 @@
 
     filesList.addEventListener("change", updateFileControls);
 
+    document.getElementById("clear-file-search").addEventListener("click", () => {
+        if (fileActionInProgress) return;
+        fileSearch.value = "";
+        updateFileControls();
+        fileSearch.focus();
+    });
+    document.getElementById("retry-connection").addEventListener("click", () => connection.refresh());
     fileSearch.addEventListener("input", updateFileControls);
     fileSort.addEventListener("change", updateFileControls);
     selectAllButton.addEventListener("click", () => {
