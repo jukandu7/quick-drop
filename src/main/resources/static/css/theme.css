@@ -1,3 +1,228 @@
+@font-face {
+    font-family: "Roboto";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("/fonts/Roboto-Variable.ttf") format("truetype");
+}
+
+html { font-family: "Roboto", Arial, sans-serif; font-size: 16px; }
+body { font-size: 1rem; line-height: 1.5; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; }
+small { font-size: 1rem; }
+h1, h2 { font-family: inherit; line-height: 1.2; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+
+/* Page layouts */
+#pin-notice {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    max-width: 36rem;
+    padding: 0.75rem 1rem;
+}
+
+#drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+    max-width: 36rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+#mode-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+#mode-switch button {
+    padding: 0.65rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+#mode-switch button[aria-pressed="true"] {
+    font-weight: 700;
+}
+
+#owner-address {
+    display: block;
+    padding: 0.75rem;
+    font-weight: 700;
+    user-select: all;
+}
+
+.upload-item,
+.receive-upload-item {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.75rem 0;
+}
+
+.upload-item { max-width: 36rem; }
+
+.upload-item progress,
+.receive-upload-item progress {
+    width: 100%;
+}
+
+#file-actions {
+    margin: 1rem 0;
+}
+
+#file-actions button {
+    margin: 0.25rem 0.25rem 0.25rem 0;
+}
+
+#files-list {
+    list-style: none;
+    padding: 0;
+}
+
+#files-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0.75rem 0;
+}
+
+.file-choice {
+    flex-shrink: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.25rem;
+}
+
+.file-details {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.file-details .expiration {
+    display: block;
+}
+
+#connect-device, #share-result, #receive-result {
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+    max-width: 24rem;
+    padding: 1rem;
+}
+
+#owner-qr, #share-qr, #receive-qr {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    width: 20rem;
+}
+
+#owner-address, #share-url, #receive-url {
+    overflow-wrap: anywhere;
+}
+
+#receive-tools {
+    margin: 1.5rem 0;
+}
+
+#guest-access {
+    margin: 1rem 0;
+}
+
+#guest-access > summary {
+    cursor: pointer;
+}
+
+#copy-notification {
+    border-radius: 0.5rem;
+    bottom: 1.5rem;
+    left: 50%;
+    max-width: calc(100vw - 2rem);
+    opacity: 0;
+    padding: 0.75rem 1rem;
+    pointer-events: none;
+    position: fixed;
+    text-align: center;
+    transform: translate(-50%, 1rem);
+    transition: opacity 150ms ease, transform 150ms ease;
+}
+
+#copy-notification.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+body.sender-page {
+    margin: 0;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.sender-shell {
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-sizing: border-box;
+    margin: 0 auto;
+    max-width: 40rem;
+    padding: 2rem;
+}
+
+.sender-label {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.sender-boundary {
+    border-left: 0.3rem solid var(--accent);
+    padding: 0.75rem 1rem;
+}
+
+#receive-drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.sender-page button,
+.auth-page button { padding: 0.65rem 1rem; }
+
+
+body.auth-page {
+    margin: 3rem auto;
+    max-width: 28rem;
+    padding: 0 1rem;
+}
+
+.auth-page form {
+    align-items: start;
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.auth-page input {
+    box-sizing: border-box;
+    padding: 0.65rem;
+    width: 100%;
+}
+
+.auth-page .pin-input {
+    letter-spacing: 0.2em;
+    max-width: 7rem;
+    text-align: center;
+}
+
+
+/* Shared dark palette and interactive states */
 :root {
     color-scheme: dark;
     --page: #11151c;
@@ -74,8 +299,6 @@ input::placeholder, textarea::placeholder { color: #a6b4c6; }
     border-color: var(--accent);
 }
 
-#mode-switch button { border-color: var(--border); }
-#mode-switch button[aria-pressed="true"] { border-color: var(--accent); }
 
 #pin-notice,
 #copy-notification {

@@ -249,3 +249,6 @@ the initializer. `receive.js` handles the guest page and is loaded only for acti
 receiving links. Server-rendered values remain in HTML attributes and metadata.
 
 Java, Spring Boot, Spring MVC, Thymeleaf, Spring Data JPA, H2, ZXing, and browser JavaScript.
+Shared typography, dark-theme colors, controls, and page layouts live in
+`src/main/resources/static/css/theme.css`. Templates use page classes to scope
+guest and PIN layouts; avoid adding duplicate inline styles or light-theme overrides.

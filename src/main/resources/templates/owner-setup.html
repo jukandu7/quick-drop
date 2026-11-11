@@ -5,69 +5,9 @@
     <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Set owner PIN — Quick Drop</title>
-    <style>
-        @font-face {
-            font-family: "Roboto";
-            font-style: normal;
-            font-weight: 100 900;
-            font-display: swap;
-            src: url("/fonts/Roboto-Variable.ttf") format("truetype");
-        }
-
-        html {
-            font-family: "Roboto", Arial, sans-serif;
-            font-size: 16px;
-        }
-
-        body {
-            font-size: 1rem;
-            line-height: 1.5;
-            margin: 3rem auto;
-            max-width: 28rem;
-            padding: 0 1rem;
-        }
-
-        button,
-        input {
-            font: inherit;
-        }
-
-        h1 {
-            font-family: inherit;
-            font-size: 2rem;
-            line-height: 1.2;
-        }
-
-        form {
-            align-items: start;
-            display: grid;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-
-        input {
-            box-sizing: border-box;
-            padding: 0.65rem;
-            width: 100%;
-        }
-
-        .pin-input {
-            letter-spacing: 0.2em;
-            max-width: 7rem;
-            text-align: center;
-        }
-
-        button {
-            padding: 0.65rem 1rem;
-        }
-
-        .error {
-            color: #b42318;
-        }
-    </style>
     <link rel="stylesheet" href="/css/theme.css">
 </head>
-<body>
+<body class="auth-page">
 <div th:replace="~{fragments/transport :: notice}"></div>
 <main>
     <div th:unless="${localRequest}">
