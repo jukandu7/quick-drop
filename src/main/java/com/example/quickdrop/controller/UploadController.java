@@ -52,7 +52,7 @@ public class UploadController {
         if (receiveLinkService.findActive(token).isEmpty()) {
             return ResponseEntity.status(HttpStatus.GONE)
                     .body(new ReceiveUploadResult(
-                            "This receive link has expired or is invalid.",
+                            "This upload link has expired or is invalid.",
                             null
                     ));
         }

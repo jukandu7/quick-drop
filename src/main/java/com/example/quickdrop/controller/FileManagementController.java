@@ -62,7 +62,7 @@ public class FileManagementController {
         }
         List<String> revoked = shareLinkService.revokeLinks(request.tokens());
         return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .body(new RevokeResult("Old download links revoked for " + revoked.size()
+                .body(new RevokeResult("Existing download links disabled for " + revoked.size()
                         + " file(s). Files kept; create new links when needed.", revoked));
     }
 

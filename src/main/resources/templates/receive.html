@@ -13,7 +13,7 @@
 <div th:replace="~{fragments/transport :: notice}"></div>
 <main class="sender-shell">
 <header>
-    <p class="sender-label" th:text="${senderLabel}">Sender page</p>
+    <p class="sender-label" th:text="${senderLabel}">Upload page</p>
     <h1 th:text="${senderHeading}">Send files to Quick Drop</h1>
     <p th:text="${senderDescription}">
         This page can only send files.
@@ -72,10 +72,10 @@
 
 <section th:unless="${active}">
     <h2 th:text="${inactiveHeading}">
-        Quick Drop is not receiving files
+        This upload link is no longer active
     </h2>
     <p th:text="${inactiveDescription}">
-        Ask the owner to start receiving and scan the new QR code.
+        Ask the owner for a new upload link.
     </p>
 </section>
 </main>

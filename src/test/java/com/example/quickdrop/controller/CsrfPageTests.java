@@ -86,7 +86,7 @@ class CsrfPageTests {
         mvc.perform(multipart("/receive/unknown/upload").file("file", new byte[0]).session(session)
                         .header("X-CSRF-Token", token).header("Origin", "http://localhost"))
                 .andExpect(status().isGone())
-                .andExpect(jsonPath("$.message").value("This receive link has expired or is invalid."));
+                .andExpect(jsonPath("$.message").value("This upload link has expired or is invalid."));
         mvc.perform(post("/download/selected").session(session)
                         .contentType("application/x-www-form-urlencoded").param("_csrf", token))
                 .andExpect(status().isBadRequest())

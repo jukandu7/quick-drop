@@ -133,17 +133,17 @@
         if (lastReceiveUrl && connectionState === "connected") {
             try {
                 await copyText(lastReceiveUrl);
-                receiveStatus.textContent = "Guest upload link copied.";
-                showNotification("Guest upload link copied!");
+                receiveStatus.textContent = "Upload link copied.";
+                showNotification("Upload link copied!");
             } catch (error) {
-                showNotification("Guest link could not be copied. You can scan its QR code instead.", 5000);
+                showNotification("Upload link could not be copied. You can scan its QR code instead.", 5000);
             }
         }
     });
 
     stopReceivingButton.addEventListener("click", async () => {
         if (!receivingActive || receiveActionInProgress || !window.confirm(
-                "Stop guest uploads and disable this guest link? Your own devices will stay connected."
+                "Disable this upload link? People with it will no longer be able to send files. Your own devices will stay connected."
         )) {
             return;
         }
@@ -166,11 +166,11 @@
 
             receivingActive = false;
             receivingPath = "";
-            receiveStatus.textContent = "Guest uploads stopped.";
-            showNotification("Guest uploads stopped.");
+            receiveStatus.textContent = "Upload link disabled.";
+            showNotification("Upload link disabled.");
         } catch (error) {
             receiveStatus.textContent =
-                    "Guest uploads could not be stopped because the "
+                    "The upload link could not be disabled because the "
                     + "server could not be reached.";
         } finally {
             receiveMutationFinishedAt = Date.now();
@@ -268,13 +268,13 @@
         if (lastShareUrl && shareBaseUrl && connectionState === "connected") {
             try {
                 await copyText(lastShareUrl);
-                fileActionStatus.textContent = "Share link copied.";
+                fileActionStatus.textContent = "Download link copied.";
                 shareFeedback.textContent = "Download link copied. Send it to your recipient.";
                 showNotification();
             } catch (error) {
                 fileActionStatus.textContent = "Copying was blocked; scan the QR code or copy the displayed link.";
                 shareFeedback.textContent = fileActionStatus.textContent;
-                showNotification("Share link could not be copied. You can scan its QR code instead.", 5000);
+                showNotification("Download link could not be copied. You can scan its QR code instead.", 5000);
             }
         }
     });

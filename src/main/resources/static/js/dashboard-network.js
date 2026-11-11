@@ -90,15 +90,15 @@
             receivingActive = snapshot.receiving.active;
             receivingPath = snapshot.receiving.receivePath || "";
             receiveExpirationLabel.textContent = snapshot.receiving.expirationLabel || "";
-            receiveStatus.textContent = receivingActive ? "Guest uploads are active."
-                    : wasActive ? "Guest upload session ended." : "Guest uploads are off.";
+            receiveStatus.textContent = receivingActive ? "Upload link is active."
+                    : wasActive ? "Upload link is no longer active." : "No active upload link.";
             if (receivingActive) {
                 const remaining = Math.max(0, Date.parse(snapshot.receiving.expiresAt)
                         - Date.parse(snapshot.serverTime) - elapsedMs);
                 receiveExpiryTimer = setTimeout(() => {
                     receivingActive = false;
                     receivingPath = "";
-                    receiveStatus.textContent = "Guest upload session expired.";
+                    receiveStatus.textContent = "Upload link has expired.";
                     updateConnectionTools();
                     connection.refresh();
                 }, remaining);
@@ -125,7 +125,7 @@
         receiveActionInProgress = true;
         clearTimeout(receiveExpiryTimer);
         updateConnectionTools();
-        receiveStatus.textContent = "Creating guest upload link...";
+        receiveStatus.textContent = "Creating upload link...";
 
         try {
             const response = await fetch("/receive-links", {
@@ -147,13 +147,13 @@
             receiveExpirationLabel.textContent = result.expirationLabel;
             updateConnectionTools();
             receiveStatus.textContent =
-                    "Guest uploads started.";
-            showNotification("Guest uploads started.");
+                    "Upload link is ready.";
+            showNotification("Upload link is ready.");
             if (lastReceiveUrl && connectionState === "connected") {
                 try {
                     await copyText(lastReceiveUrl);
                 } catch (error) {
-                    receiveStatus.textContent = "Guest uploads started. Link could not be copied; scan the guest QR code instead.";
+                    receiveStatus.textContent = "Upload link is ready. Link could not be copied; scan the upload QR code instead.";
                 }
             }
             receiveResult.scrollIntoView({
@@ -162,7 +162,7 @@
             });
         } catch (error) {
             receiveStatus.textContent =
-                    "Guest uploads could not be started because the "
+                    "The upload link could not be created because the "
                     + "server could not be reached.";
         } finally {
             receiveMutationFinishedAt = Date.now();

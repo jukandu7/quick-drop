@@ -1,6 +1,6 @@
 // Dashboard files helpers. Loaded before dashboard.js initializes page state.
     function showNotification(
-            message = "Share link copied!",
+            message = "Download link copied!",
             duration = 2000
     ) {
         clearTimeout(notificationTimer);
@@ -262,7 +262,7 @@
         updateFileControls();
         shareResult.hidden = true;
         shareFeedback.textContent = "";
-        fileActionStatus.textContent = "Creating share link...";
+        fileActionStatus.textContent = "Creating download link...";
 
         try {
             if (choices.length > 1) {
@@ -284,7 +284,7 @@
             }
 
             if (!shareBaseUrl || connectionState !== "connected") {
-                fileActionStatus.textContent = "Reconnect to Quick Drop, then create the share link again.";
+                fileActionStatus.textContent = "Reconnect to Quick Drop, then create the download link again.";
                 return;
             }
             const shareLink = new URL(sharePath, shareBaseUrl + "/").href;
@@ -306,15 +306,15 @@
             try {
                 await copyText(shareLink);
             } catch (error) {
-                fileActionStatus.textContent = "Share link created. Copying was blocked; scan the QR code or copy the displayed link.";
+                fileActionStatus.textContent = "Download link created. Copying was blocked; scan the QR code or copy the displayed link.";
                 shareFeedback.textContent = fileActionStatus.textContent;
-                showNotification("Share link created. Scan the QR code to use it.", 5000);
+                showNotification("Download link created. Scan the QR code to use it.", 5000);
                 return;
             }
             showNotification(
                     sharedFileCount === 1
-                            ? "Share link created and copied!"
-                            : "Share link for " + sharedFileCount
+                            ? "Download link created and copied!"
+                            : "Download link for " + sharedFileCount
                                     + " files created and copied!",
                     4000
             );
@@ -325,7 +325,7 @@
                     : "One link for " + sharedFileCount + " files copied.";
         } catch (error) {
             fileActionStatus.textContent =
-                    "The share link could not be created. Please try again.";
+                    "The download link could not be created. Please try again.";
         } finally {
             fileActionInProgress = false;
             updateFileControls();
@@ -480,13 +480,13 @@
 
     async function revokeDownloadLinks(choices) {
         if (fileActionInProgress || choices.length === 0) return;
-        if (!window.confirm("Revoke download links for " + describeFileSelection(choices)
+        if (!window.confirm("Disable existing links for " + describeFileSelection(choices)
                 + "\n\nExisting links, including combined links containing these files, will stop working."
                 + " The files will be kept. You can create new links afterward.")) return;
         const tokens = choices.map(choice => choice.value);
         fileActionInProgress = true;
         updateFileControls();
-        fileActionStatus.textContent = "Revoking download links...";
+        fileActionStatus.textContent = "Disabling existing links...";
         try {
             const response = await fetch("/share-links", {
                 method: "DELETE",
@@ -500,7 +500,7 @@
                 scheduleAvailableFilesSync();
             }
         } catch (error) {
-            fileActionStatus.textContent = "Could not confirm revocation. Reconnect and refresh the file list before trying again.";
+            fileActionStatus.textContent = "Could not confirm whether the links were disabled. Reconnect and refresh the file list before trying again.";
         } finally {
             fileActionInProgress = false;
             updateFileControls();

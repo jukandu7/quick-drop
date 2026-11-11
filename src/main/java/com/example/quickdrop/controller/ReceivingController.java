@@ -36,7 +36,7 @@ public class ReceivingController {
             lifetime = calculateReceiveLifetime(request.expiration());
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ReceiveLinkResult(
-                    "Choose a valid receiving time.",
+                    "Choose how long the upload link should work.",
                     null,
                     null
             ));
@@ -46,7 +46,7 @@ public class ReceivingController {
                 receiveLinkService.start(lifetime);
 
         return ResponseEntity.ok(new ReceiveLinkResult(
-                "Receiving started.",
+                "Upload link created.",
                 "/receive/" + link.token(),
                 formatExpiration(link.expiresAt())
         ));
@@ -57,12 +57,12 @@ public class ReceivingController {
         if (!receiveLinkService.stop()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ReceiveLinkStatus(
-                            "Receiving is already stopped."
+                            "Upload link is already disabled."
                     ));
         }
 
         return ResponseEntity.ok(new ReceiveLinkStatus(
-                "Receiving stopped."
+                "Upload link disabled."
         ));
     }
 
@@ -77,7 +77,7 @@ public class ReceivingController {
                 .orElse(null);
 
         model.addAttribute("receiveToken", token);
-        model.addAttribute("senderLabel", "Quick Drop sender");
+        model.addAttribute("senderLabel", "Quick Drop upload");
         model.addAttribute("senderHeading", "Send files to Quick Drop");
         model.addAttribute(
                 "senderDescription",
@@ -94,12 +94,12 @@ public class ReceivingController {
             model.addAttribute("active", false);
             model.addAttribute(
                     "inactiveHeading",
-                    "Quick Drop is not receiving files"
+                    "This upload link is no longer active"
             );
             model.addAttribute(
                     "inactiveDescription",
-                    "This receiving session ended or expired. Ask the "
-                            + "owner to start receiving again."
+                    "This upload link was disabled or expired. Ask the "
+                            + "owner for a new upload link."
             );
             return "receive";
         }
@@ -120,19 +120,19 @@ public class ReceivingController {
     ) {
         response.setStatus(HttpServletResponse.SC_GONE);
         model.addAttribute("active", false);
-        model.addAttribute("senderLabel", "Sender link replaced");
-        model.addAttribute("senderHeading", "Ask for the current QR code");
+        model.addAttribute("senderLabel", "Upload link replaced");
+        model.addAttribute("senderHeading", "Ask for a new upload link");
         model.addAttribute(
                 "senderDescription",
-                "Quick Drop now uses a new link each time receiving starts."
+                "Quick Drop creates a new upload link each time you allow someone to send files."
         );
         model.addAttribute(
                 "inactiveHeading",
-                "This old sender address cannot accept files"
+                "This old upload address cannot accept files"
         );
         model.addAttribute(
                 "inactiveDescription",
-                "Ask the owner to start receiving and scan the new QR code."
+                "Ask the owner for a new upload link."
         );
         return "receive";
     }

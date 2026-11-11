@@ -65,7 +65,7 @@
                 connected: "Connected to Quick Drop.",
                 reconnecting: "Connection to Quick Drop lost. Reconnecting…",
                 unavailable: "Cannot reach Quick Drop. Still trying…",
-                locked: "Quick Drop could not confirm access to this sender link."
+                locked: "Quick Drop could not confirm access to this upload link."
             };
             connectionStatus.textContent = messages[state] ?? messages.unavailable;
             connectionHelp.hidden = state === "connected" || state === "checking";
@@ -112,8 +112,8 @@
         receivingEndedAuthoritatively ||= authoritative;
         clearTimeout(expiryTimer);
         sessionEndedMessage.textContent = receivingEndedAuthoritatively
-                ? "Receiving session ended. Ask the owner to start receiving and scan the new QR code."
-                : "Receiving time reached. Checking this sender link with Quick Drop…";
+                ? "Upload link is no longer active. Ask the owner for a new upload link."
+                : "Upload link may have expired. Checking with Quick Drop…";
         sessionEndedMessage.hidden = false;
         updateReceivingControls();
 
@@ -264,8 +264,8 @@
                     retryable: !receivingEndedAuthoritatively,
                     message: receivingSessionEnded
                             ? receivingEndedAuthoritatively
-                                    ? "Not sent — receiving session ended. Ask owner for a new sender link."
-                                    : "Not sent — receiving time reached. Waiting for Quick Drop to confirm this sender link."
+                                    ? "Not sent — upload link is no longer active. Ask the owner for a new upload link."
+                                    : "Not sent — upload link may have expired. Waiting for Quick Drop to confirm."
                             : "Upload interrupted before confirmation. The file may have arrived; check with the owner before retrying."
                 });
             });
@@ -275,7 +275,7 @@
                     uploadBatch.finish(entry, {
                         success: false,
                         retryable: false,
-                        message: entry.message + " Receiving session ended. Ask owner for a new sender link."
+                        message: entry.message + " Upload link is no longer active. Ask the owner for a new upload link."
                     });
                 });
             }
@@ -362,7 +362,7 @@
 
                 const expired = request.status === 410;
                 const message = expired
-                        ? "Receiving session ended. Ask owner for a new sender link."
+                        ? "Upload link is no longer active. Ask the owner for a new upload link."
                         : responseMessage ?? "Upload failed. Try again.";
                 setRowStatus(row, message);
                 resolve({

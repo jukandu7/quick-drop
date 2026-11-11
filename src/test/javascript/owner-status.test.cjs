@@ -139,7 +139,7 @@ function qrUrl(node) {
     return source ? new URL(source, 'http://localhost:8080').searchParams.get('text') : null;
 }
 
-test('a new network address updates the owner, shared file, sender links, and all QR codes together without copying', () => {
+test('a new network address updates the owner, shared file, upload links, and all QR codes together without copying', () => {
     const page = ownerPage();
     page.setConnection('connected');
     page.publish(status('http://192.168.1.10:8080'));
@@ -242,7 +242,7 @@ test('receiving session changes remove an ended sender token and render only the
     assert.equal(page.node('owner-qr').hidden, false);
     assert.equal(qrUrl(page.node('owner-qr')), 'http://192.168.1.10:8080');
     assert.equal(page.node('copy-owner-link').disabled, false);
-    assert.match(page.node('receive-status').textContent, /ended/);
+    assert.match(page.node('receive-status').textContent, /no longer active/);
     assert.equal(page.timers.size, 0);
 
     page.publish(status('http://192.168.1.10:8080', '/receive/new-session'));
@@ -360,7 +360,7 @@ for (const fileCount of [1, 2]) {
         assert.equal(page.node('share-qr').hidden, false);
         assert.equal(qrUrl(page.node('share-qr')), expectedUrl);
         assert.equal(page.node('file-action-status').textContent,
-            'Share link created. Copying was blocked; scan the QR code or copy the displayed link.');
+            'Download link created. Copying was blocked; scan the QR code or copy the displayed link.');
         assert.equal(page.node('share-files-label').textContent,
             fileCount === 1 ? 'Recipient downloads: file-0.txt' : 'Recipient downloads one ZIP containing 2 files:\nfile-0.txt\nfile-1.txt');
         assert.deepEqual(page.clipboardWrites, []);
@@ -384,7 +384,7 @@ test('creating a share preserves the successful copy message and visible share r
     assert.equal(page.node('share-result').hidden, false);
     assert.equal(qrUrl(page.node('share-qr')), 'http://192.168.1.10:8080/share/file-token');
     assert.deepEqual(page.clipboardWrites, ['http://192.168.1.10:8080/share/file-token']);
-    assert.deepEqual(page.notifications, ['Share link created and copied!']);
+    assert.deepEqual(page.notifications, ['Download link created and copied!']);
     assert.equal(page.node('file-action-status').textContent, 'File link copied.');
 });
 
