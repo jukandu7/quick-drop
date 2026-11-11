@@ -392,7 +392,7 @@ test('the dashboard places full device access ahead of collapsed guest-only acce
     assert.ok(guest, 'Guest access should be an optional details section');
     assert.doesNotMatch(guest[0], /\sopen(?:\s|=|>)/i, 'Guest tools must start collapsed');
     const primary = template.slice(0, guest.index);
-    assert.match(primary, /Connect a device/);
+    assert.match(primary, /Connect your own device/);
     assert.match(primary, /id="owner-qr"/);
     assert.match(primary, /id="copy-owner-link"/);
     assert.match(primary, /(?:four|4)[- ]digit (?:owner )?PIN/i);
@@ -400,7 +400,7 @@ test('the dashboard places full device access ahead of collapsed guest-only acce
         assert.match(primary, capability);
     }
     const guestSection = template.slice(guest.index, template.indexOf('</details>', guest.index));
-    assert.match(guestSection, /Let someone send files/);
+    assert.match(guestSection, /Let someone send you files/);
     assert.match(guestSection, /(?:cannot|can't|without)[\s\S]*(?:see|seeing|view)[\s\S]*files/i);
     assert.match(template, /<meta\b[^>]*name="viewport"[^>]*content="width=device-width,\s*initial-scale=1(?:\.0)?"/i);
 });

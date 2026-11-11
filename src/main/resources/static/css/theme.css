@@ -535,3 +535,7 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 #connect-device-toggle::after { content: "+"; float: right; margin-left: 12px; }
 #connect-device-toggle[aria-expanded="true"]::after { content: "−"; }
 .dashboard-page #connect-device { margin-top: 12px; }
+
+.access-help, .access-summary { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.access-help { margin: 8px 4px 16px; }
+.access-summary { display: block; margin-top: 4px; }

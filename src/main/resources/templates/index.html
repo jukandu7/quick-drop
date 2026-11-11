@@ -155,7 +155,8 @@
 </section>
 </div>
 <aside class="connection-sidebar" aria-label="Connect and share">
-<button id="connect-device-toggle" type="button" aria-expanded="false" aria-controls="connect-device">Connect a device</button>
+<button id="connect-device-toggle" type="button" aria-expanded="false" aria-controls="connect-device" aria-describedby="device-access-help">Connect your own device</button>
+<p id="device-access-help" class="access-help">Full access with your owner PIN: add, view, download, share, and delete files.</p>
 <section id="connect-device" aria-labelledby="connect-device-heading" hidden>
     <h2 id="connect-device-heading">Open Quick Drop on your device</h2>
     <p>Use a browser on your other computer, tablet, or phone. No app installation needed.</p>
@@ -174,20 +175,18 @@
     </details>
     <p>Keep Quick Drop running on the host computer. If its network changes, use the updated address or QR code shown here.</p>
     <p>
-        Full owner access: connected devices can upload, view, download, share, and delete files.
-        Use this for your own trusted devices; your PIN is not included in the address or QR code.
+        Use this address only for your own trusted devices. Your PIN is not included in the address or QR code.
     </p>
 </section>
 
 <details id="guest-access">
-    <summary>Let someone send files (optional)</summary>
+    <summary><span>Let someone send you files</span><small class="access-summary">Upload only · No owner PIN needed</small></summary>
     <section id="receive-tools"
              th:attr="data-active=${receivingActive},data-sender-url=${senderUrl}">
-        <h2>Guest uploads</h2>
+        <h2>Upload-only access</h2>
         <p>
-            Create a temporary upload-only link for someone else. Guests do not need
-            your owner PIN and cannot see, download, share, or delete your stored files.
-            Use Connect a device above for two-way transfers with your own devices.
+            Anyone with this temporary link can send files to your Quick Drop computer.
+            They cannot see, download, share, or delete your stored files, and do not need your owner PIN.
         </p>
         <div id="receive-start-controls" th:hidden="${receivingActive}">
             <label for="receive-expiration">Allow guest uploads for</label>
@@ -207,7 +206,7 @@
     <section id="receive-result" th:hidden="${!receivingActive}">
         <h2>Guest upload link</h2>
         <img id="receive-qr" alt="QR code for guest uploads only">
-        <p>Have your guest open this link in a browser or scan the code on the same local network.</p>
+        <p>This link only lets someone upload files. Have them open it or scan the code on the same local network. Keep your owner PIN private.</p>
         <p id="receive-expiration-label" th:text="${receivingExpirationLabel}"></p>
         <p><a id="receive-url" target="_blank" rel="noopener" th:href="${senderUrl}" th:text="${senderUrl}"></a></p>
         <button id="copy-receive-link" type="button">Copy guest upload link</button>
