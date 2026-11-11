@@ -59,6 +59,8 @@ For someone who only needs to send files, expand **Let someone send files (optio
 
 To share downloads, select files in **Receive files** and choose **Create share link**. Keep the host computer running and connected while links are in use.
 
+Replacing a file invalidates its previous download link and any combined links containing that version. To invalidate links without deleting files, select the files and choose **Revoke download links**. This also revokes combined links containing those files; their contents and expiration settings are preserved. Create fresh links afterward if needed. Revocation cannot remove copies already downloaded or retract bytes from a download that has already started.
+
 Owner login allows five attempts per client before a one-minute cooldown. Repeated bursts double the cooldown up to 15 minutes; 30 minutes without an admitted attempt resets the client history. All attempts, including successful and malformed submissions, count. Across all clients, at most 30 attempts per minute and two simultaneous PIN checks are allowed. Blocked requests return HTTP 429 with a retry time. Limits use the direct connection address, are held in memory, and reset when the app restarts. Clients behind one proxy share a limit. Existing authenticated sessions and local dashboard access remain available during cooldowns.
 
 PIN changes require the current PIN once setup is complete. Forms and browser uploads include a session-bound CSRF token; requests with missing tokens or a foreign browser origin are rejected. After restarting the server or signing out, refresh old tabs before submitting another action. API clients must first load a page, retain its session cookie, and send its token as `X-CSRF-Token` (or `_csrf` for URL-encoded forms).
@@ -77,6 +79,8 @@ Settings live in [`src/main/resources/application.properties`](src/main/resource
 | Uploaded files | `uploads/` |
 
 Storage paths are relative to the working directory. Always launch from the repository root to use the same database and uploads. The `data/` and `uploads/` directories are ignored by Git. Stop the app before backing up these directories together.
+
+New uploads are stored under unique internal IDs in `uploads/.versions/`; original filenames remain in the database and download headers. Existing files directly under `uploads/` remain readable and move to the new layout when replaced. Preserve the database and uploads together when backing up or moving the app.
 
 ## Build and test
 

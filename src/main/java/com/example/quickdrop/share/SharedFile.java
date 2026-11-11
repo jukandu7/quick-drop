@@ -18,6 +18,8 @@ public class SharedFile {
     private String filename;
 
     private Instant expiresAt;
+    // Null identifies files stored by older versions directly under uploads/.
+    private String storageKey;
 
     protected SharedFile() {
     }
@@ -35,6 +37,10 @@ public class SharedFile {
     public String getFilename() {
         return filename;
     }
+
+    public String getStorageKey() { return storageKey; }
+
+    public void setStorageKey(String storageKey) { this.storageKey = storageKey; }
 
     public Instant getExpiresAt() {
         return expiresAt;

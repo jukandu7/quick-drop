@@ -4,6 +4,10 @@ import com.example.quickdrop.events.FileEventService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,6 +22,7 @@ import java.util.UUID;
 
 @Service
 public class ShareLinkService {
+    private static final Logger log = LoggerFactory.getLogger(ShareLinkService.class);
 
     private final SharedFileRepository repository;
     private final ShareBundleRepository bundleRepository;
@@ -48,36 +53,92 @@ public class ShareLinkService {
     @Transactional
     public LinkDetails createOrUpdateLink(
             String filename,
-            Instant expiresAt
+            Instant expiresAt,
+            String storageKey
     ) {
-        SharedFile sharedFile = repository.findByFilename(filename)
-                .orElseGet(() -> new SharedFile(
-                        UUID.randomUUID().toString(), filename, expiresAt
-                ));
-
-        sharedFile.setExpiresAt(expiresAt);
+        repository.findByFilename(filename).ifPresent(previous -> {
+            revokeBundles(List.of(previous.getToken()));
+            repository.delete(previous);
+            repository.flush(); // Free the unique filename before inserting the new version.
+            removeAfterCommit(pathFor(previous));
+        });
+        SharedFile sharedFile = new SharedFile(UUID.randomUUID().toString(), filename, expiresAt);
+        sharedFile.setStorageKey(storageKey);
         LinkDetails details = toDetails(repository.save(sharedFile));
         fileEventService.filesChangedAfterCommit();
         return details;
     }
 
     @Transactional
-    public Optional<String> findFilename(String token) {
-        Optional<SharedFile> match = repository.findById(token);
-
-        if (match.isEmpty()) {
-            return Optional.empty();
+    public List<String> revokeLinks(List<String> tokens) {
+        List<String> revoked = new ArrayList<>();
+        for (String token : new LinkedHashSet<>(tokens)) {
+            repository.findById(token).ifPresent(previous -> {
+                SharedFile replacement = new SharedFile(UUID.randomUUID().toString(),
+                        previous.getFilename(), previous.getExpiresAt());
+                replacement.setStorageKey(previous.getStorageKey());
+                revokeBundles(List.of(token));
+                repository.delete(previous);
+                repository.flush();
+                repository.save(replacement);
+                revoked.add(token);
+            });
         }
-
-        SharedFile sharedFile = match.get();
-
-        if (isExpired(sharedFile, Instant.now())) {
-            delete(sharedFile);
-            return Optional.empty();
-        }
-
-        return Optional.of(sharedFile.getFilename());
+        if (!revoked.isEmpty()) fileEventService.filesChangedAfterCommit();
+        return revoked;
     }
+
+    private void revokeBundles(List<String> tokens) {
+        bundleRepository.deleteAll(bundleRepository.findContainingTokens(tokens));
+    }
+
+    private void removeAfterCommit(Path oldPath) {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override public void afterCommit() {
+                        try { Files.deleteIfExists(oldPath); }
+                        catch (IOException exception) {
+                            log.warn("Could not remove superseded file {}", oldPath, exception);
+                        }
+                    }
+                });
+    }
+
+    private Path pathFor(SharedFile file) {
+        Path path = file.getStorageKey() == null
+                ? uploadDirectory.resolve(file.getFilename()).normalize()
+                : uploadDirectory.resolve(".versions").resolve(file.getStorageKey()).normalize();
+        Path parent = file.getStorageKey() == null ? uploadDirectory : uploadDirectory.resolve(".versions");
+        if (!parent.equals(path.getParent())) throw new IllegalArgumentException("Invalid stored file path");
+        return path;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<FileReference> findByFilename(String filename) {
+        return repository.findByFilename(filename).map(this::reference);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileReference> storedFiles() {
+        return repository.findAll().stream().map(this::reference).toList();
+    }
+
+    @Transactional
+    public Optional<FileReference> findFile(String token) {
+        Optional<SharedFile> match = repository.findById(token);
+        if (match.isEmpty()) return Optional.empty();
+        if (isExpired(match.get(), Instant.now())) {
+            delete(match.get());
+            return Optional.empty();
+        }
+        return match.map(this::reference);
+    }
+
+    private FileReference reference(SharedFile file) {
+        return new FileReference(file.getFilename(), pathFor(file));
+    }
+
+    public record FileReference(String filename, Path path) { }
 
     @Transactional
     public List<String> deleteByTokens(List<String> tokens) {
@@ -116,7 +177,7 @@ public class ShareLinkService {
     }
 
     @Transactional
-    public List<String> findBundleFilenames(String bundleToken) {
+    public List<FileReference> findBundleFiles(String bundleToken) {
         Optional<ShareBundle> match = bundleRepository
                 .findById(bundleToken);
 
@@ -142,7 +203,7 @@ public class ShareLinkService {
         return activeTokens.stream()
                 .map(repository::findById)
                 .flatMap(Optional::stream)
-                .map(SharedFile::getFilename)
+                .map(this::reference)
                 .toList();
     }
 
@@ -176,9 +237,7 @@ public class ShareLinkService {
                 continue;
             }
 
-            Path filePath = uploadDirectory
-                    .resolve(sharedFile.getFilename())
-                    .normalize();
+            Path filePath = pathFor(sharedFile);
 
             if (filePath.startsWith(uploadDirectory)
                     && Files.isRegularFile(filePath)) {
@@ -190,9 +249,7 @@ public class ShareLinkService {
     }
 
     private void delete(SharedFile sharedFile) {
-        Path filePath = uploadDirectory
-                .resolve(sharedFile.getFilename())
-                .normalize();
+        Path filePath = pathFor(sharedFile);
 
         try {
             if (filePath.startsWith(uploadDirectory)) {

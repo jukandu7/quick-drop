@@ -297,6 +297,7 @@
     <button id="share-selected" type="button" disabled>
         Create share link
     </button>
+    <button id="revoke-selected" type="button" disabled>Revoke download links</button>
     <button id="delete-selected" type="button" disabled>
         Delete selected
     </button>
@@ -442,6 +443,7 @@
     const selectionStatus = document.getElementById("selection-status");
     const fileActionStatus = document.getElementById("file-action-status");
     const shareSelectedButton = document.getElementById("share-selected");
+    const revokeSelectedButton = document.getElementById("revoke-selected");
     const downloadSelectedButton = document.getElementById("download-selected");
     const selectAllButton = document.getElementById("select-all");
     const deleteSelectedButton =
@@ -1053,6 +1055,10 @@
         downloadSelectedFiles(getSelectedFileChoices());
     });
 
+    revokeSelectedButton.addEventListener("click", () => {
+        revokeDownloadLinks(getSelectedFileChoices());
+    });
+
     deleteSelectedButton.addEventListener("click", () => {
         deleteFiles(getSelectedFileChoices());
     });
@@ -1160,6 +1166,7 @@
                 || selectedCount === 0;
         deleteSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
+        revokeSelectedButton.disabled = fileActionInProgress || selectedCount === 0;
         selectAllButton.disabled = fileActionInProgress;
         choices.forEach(choice => choice.disabled = fileActionInProgress);
         selectAllButton.textContent = choices.length > 0
@@ -1457,6 +1464,33 @@
         filesList.appendChild(listItem);
 
         updateFileControls();
+    }
+
+    async function revokeDownloadLinks(choices) {
+        if (fileActionInProgress || choices.length === 0) return;
+        if (!window.confirm("Revoke existing download links for these files? Any combined links containing them will also stop working. The files will be kept.")) return;
+        const tokens = choices.map(choice => choice.value);
+        fileActionInProgress = true;
+        updateFileControls();
+        fileActionStatus.textContent = "Revoking download links...";
+        try {
+            const response = await fetch("/share-links", {
+                method: "DELETE",
+                headers: {"Content-Type": "application/json", "X-CSRF-Token": document.getElementById("csrf-token").content},
+                body: JSON.stringify({tokens})
+            });
+            const result = await response.json();
+            fileActionStatus.textContent = result.message;
+            if (response.ok) {
+                result.revokedTokens.forEach(invalidateShareResult);
+                scheduleAvailableFilesSync();
+            }
+        } catch (error) {
+            fileActionStatus.textContent = "Could not confirm revocation. Reconnect and refresh the file list before trying again.";
+        } finally {
+            fileActionInProgress = false;
+            updateFileControls();
+        }
     }
 
     async function deleteFiles(choices) {

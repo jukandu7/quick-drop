@@ -119,7 +119,7 @@ class SelectedDownloadTests {
         assertThat(ContentDisposition.parse(response.getHeader(
                 HttpHeaders.CONTENT_DISPOSITION)).getFilename())
                 .isEqualTo("single.bin");
-        verify(shareLinkService, times(1)).findFilename("first");
+        verify(shareLinkService, times(1)).findFile("first");
     }
 
     @Test
@@ -140,7 +140,7 @@ class SelectedDownloadTests {
     void staleTokenRejectsTheWholeSelectionBeforeAnAttachmentStarts()
             throws Exception {
         addFile("first", "available.bin", new byte[]{1, 2, 3});
-        when(shareLinkService.findFilename("expired"))
+        when(shareLinkService.findFile("expired"))
                 .thenReturn(Optional.empty());
 
         assertRejected(download("first", "expired"), 409);
@@ -149,8 +149,8 @@ class SelectedDownloadTests {
     @Test
     void fileRemovedFromDiskRejectsTheWholeSelection() throws Exception {
         addFile("first", "available.bin", new byte[]{1, 2, 3});
-        when(shareLinkService.findFilename("missing"))
-                .thenReturn(Optional.of("missing.bin"));
+        when(shareLinkService.findFile("missing"))
+                .thenReturn(Optional.of(new ShareLinkService.FileReference("missing.bin", uploads.resolve("missing.bin"))));
 
         assertRejected(download("first", "missing"), 409);
     }
@@ -158,8 +158,8 @@ class SelectedDownloadTests {
     @Test
     void resolvedFilenameCannotEscapeTheUploadDirectory() throws Exception {
         Files.write(temporaryDirectory.resolve("outside.bin"), new byte[]{9, 8});
-        when(shareLinkService.findFilename("outside"))
-                .thenReturn(Optional.of("../outside.bin"));
+        when(shareLinkService.findFile("outside"))
+                .thenReturn(Optional.of(new ShareLinkService.FileReference("../outside.bin", uploads.resolve("../outside.bin").normalize())));
 
         assertRejected(download("outside"), 409);
     }
@@ -167,8 +167,8 @@ class SelectedDownloadTests {
     private void addFile(String token, String filename, byte[] contents)
             throws Exception {
         Files.write(uploads.resolve(filename), contents);
-        when(shareLinkService.findFilename(token))
-                .thenReturn(Optional.of(filename));
+        when(shareLinkService.findFile(token))
+                .thenReturn(Optional.of(new ShareLinkService.FileReference(filename, uploads.resolve(filename))));
     }
 
     private MockHttpServletResponse download(String... tokens) throws Exception {

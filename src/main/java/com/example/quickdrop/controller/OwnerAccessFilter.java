@@ -79,6 +79,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
                 || requestPath.equals("/download/selected")
                 || requestPath.equals("/files")
                 || requestPath.equals("/share/bundles")
+                || requestPath.equals("/share-links")
                 || requestPath.equals("/receive-links")
                 || requestPath.equals("/h2-console")
                 || requestPath.startsWith("/h2-console/");
