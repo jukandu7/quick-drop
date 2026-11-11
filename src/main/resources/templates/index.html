@@ -101,6 +101,13 @@
 
 <p id="storage-status" th:text="${storageLabel}"></p>
 
+<div class="file-browser-tools">
+    <div><label for="file-search">Find a file</label><input id="file-search" type="search" placeholder="Search filenames" aria-controls="files-list" aria-describedby="filter-help"></div>
+    <div><label for="file-sort">Sort by</label><select id="file-sort" aria-controls="files-list"><option value="name">Name: A–Z</option><option value="name-desc">Name: Z–A</option><option value="expiration">Expiring soonest</option></select></div>
+</div>
+<p id="filter-help">Filtering clears selections outside the results.</p>
+<p id="file-results" role="status"></p>
+<p id="no-matches" hidden>No matching files. Try another filename or clear your search.</p>
 <div id="file-actions" th:hidden="${#lists.isEmpty(files)}">
     <button id="select-all" type="button">Select all</button>
     <button id="download-selected" type="button" disabled>
@@ -124,7 +131,7 @@
 
 <ul id="files-list">
     <li th:each="file : ${files}"
-        th:attr="data-share-token=${file.shareToken}">
+        th:attr="data-share-token=${file.shareToken},data-expires-at=${file.expiresAt}">
         <input type="checkbox"
                class="file-choice"
                th:value="${file.shareToken}"
@@ -134,6 +141,7 @@
                th:attr="data-filename=${file.filename}"
                th:text="${file.filename}">
             </a>
+            <small class="file-size" th:text="${file.sizeLabel}"></small>
             <small class="expiration" th:text="${file.expirationLabel}"></small>
         </span>
     </li>

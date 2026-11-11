@@ -9,6 +9,10 @@
     const retryNote = document.getElementById("retry-note");
     const expirationSelect = document.getElementById("expiration");
     const filesList = document.getElementById("files-list");
+    const fileSearch = document.getElementById("file-search");
+    const fileSort = document.getElementById("file-sort");
+    const fileResults = document.getElementById("file-results");
+    const noMatches = document.getElementById("no-matches");
     const emptyMessage = document.getElementById("empty-message");
     const storageStatus = document.getElementById("storage-status");
     let shareBaseUrl = null;
@@ -213,12 +217,14 @@
 
     filesList.addEventListener("change", updateFileControls);
 
+    fileSearch.addEventListener("input", updateFileControls);
+    fileSort.addEventListener("change", updateFileControls);
     selectAllButton.addEventListener("click", () => {
         if (fileActionInProgress) {
             return;
         }
 
-        const choices = getFileChoices();
+        const choices = getVisibleFileChoices();
         const allSelected = choices.every(choice => choice.checked);
 
         choices.forEach(choice => choice.checked = !allSelected);

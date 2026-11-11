@@ -177,6 +177,7 @@
                             response.shareToken,
                             response.expirationLabel
                     );
+                    scheduleAvailableFilesSync();
                     queueUploadedFileNotification(response.filename);
                     resolve({success: true});
                     return;

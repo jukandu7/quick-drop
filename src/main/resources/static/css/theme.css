@@ -486,3 +486,21 @@ body.settings-page { max-width: 680px; margin: 30px auto; padding: 0 20px; }
 .transfer-results li[data-state="uploaded"] span { color: #a0dfb8; }
 .transfer-results li[data-state="skipped"] span { color: #e9c574; }
 #retry-failed, #receive-retry-failed { margin-top: 12px; min-height: 44px; }
+
+/* File browsing and selection */
+.file-browser-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
+.file-browser-tools label { display: block; margin-bottom: 6px; font-size: .85rem; }
+.file-browser-tools input, .file-browser-tools select { box-sizing: border-box; width: 100%; min-height: 44px; }
+#filter-help, #file-results, .file-size { color: var(--muted, #a8b6c9); font-size: .8rem; }
+.file-size { display: block; margin-top: 6px; }
+#files-list li.is-selected { background: #1c334c; border-color: #9ac4ff; box-shadow: inset 3px 0 #9ac4ff; }
+#files-list li:focus-within { outline: 2px solid #9ac4ff; outline-offset: 3px; }
+.file-choice { min-width: 24px; min-height: 24px; cursor: pointer; }
+#no-matches { padding: 24px 12px; text-align: center; border: 1px dashed var(--border); border-radius: 9px; }
+@media (max-width: 760px) {
+    .file-browser-tools { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    #file-actions { position: sticky; top: 8px; z-index: 5; padding: 12px; background: #1b2330; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 20px #0006; }
+    #file-actions button { flex: 1 1 42%; min-height: 44px; }
+    #file-actions p { margin: 0; font-size: .75rem; }
+    #selection-status { order: -1; }
+}

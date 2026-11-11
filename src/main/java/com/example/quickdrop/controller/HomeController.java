@@ -98,7 +98,7 @@ public class HomeController {
     private FilesSnapshot createFilesSnapshot() {
         ShareLinkService.StorageSnapshot snapshot = shareLinkService.snapshot();
         List<FileView> files = snapshot.files().stream()
-                .map(file -> new FileView(file.filename(), file.token(), formatExpiration(file.expiresAt())))
+                .map(file -> new FileView(file.filename(), file.token(), formatExpiration(file.expiresAt()), file.expiresAt(), file.sizeBytes(), DisplayFormats.size(file.sizeBytes())))
                 .toList();
         return new FilesSnapshot(files, formatStorage(snapshot.usedBytes()));
     }

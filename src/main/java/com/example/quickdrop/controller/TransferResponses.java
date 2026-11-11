@@ -79,7 +79,10 @@ public final class TransferResponses {
     public record FileView(
             String filename,
             String shareToken,
-            String expirationLabel
+            String expirationLabel,
+            java.time.Instant expiresAt,
+            long sizeBytes,
+            String sizeLabel
     ) {
     }
 

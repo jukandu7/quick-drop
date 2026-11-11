@@ -182,7 +182,7 @@ public class ShareLinkService {
     public StorageSnapshot snapshot() {
         return read(() -> new StorageSnapshot(repository.findAll().stream().filter(this::available)
                 .sorted(Comparator.comparing(SharedFile::getFilename))
-                .map(file -> new FileEntry(file.getFilename(), file.getToken(), file.getExpiresAt())).toList(), usedBytes()));
+                .map(file -> new FileEntry(file.getFilename(), file.getToken(), file.getExpiresAt(), size(pathFor(file)))).toList(), usedBytes()));
     }
 
     public long usedStorage() { return read(this::usedBytes); }
@@ -388,7 +388,7 @@ public class ShareLinkService {
     private FileReference reference(SharedFile file) { return new FileReference(file.getFilename(), pathFor(file)); }
 
     public record FileReference(String filename, Path path) { }
-    public record FileEntry(String filename, String token, Instant expiresAt) { }
+    public record FileEntry(String filename, String token, Instant expiresAt, long sizeBytes) { }
     public record StorageSnapshot(List<FileEntry> files, long usedBytes) { }
     public record StoredUpload(String filename, String token, Instant expiresAt, long usedBytes) { }
     public record BundleDetails(String token, int fileCount) { }

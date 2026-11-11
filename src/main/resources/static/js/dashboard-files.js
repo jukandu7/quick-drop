@@ -72,16 +72,44 @@
     }
 
     function getSelectedFileChoices() {
-        return getFileChoices().filter(choice => choice.checked);
+        return getVisibleFileChoices().filter(choice => choice.checked);
+    }
+
+    function getVisibleFileChoices() {
+        return getFileChoices().filter(choice => !choice.closest("li").hidden);
+    }
+
+    function applyFileFilter() {
+        const query = fileSearch.value.trim().toLocaleLowerCase();
+        const choices = getFileChoices();
+        choices.forEach(choice => {
+            const row = choice.closest("li");
+            row.hidden = !choice.dataset.filename.toLocaleLowerCase().includes(query);
+            if (row.hidden) choice.checked = false;
+            row.classList.toggle("is-selected", choice.checked);
+        });
+        choices.sort((a, b) => {
+            if (fileSort.value === "expiration") {
+                const expiry = choice => Date.parse(choice.closest("li").dataset.expiresAt) || Infinity;
+                const difference = expiry(a) - expiry(b);
+                if (difference && !Number.isNaN(difference)) return difference;
+            }
+            const order = a.dataset.filename.localeCompare(b.dataset.filename, undefined, {numeric: true, sensitivity: "base"});
+            return fileSort.value === "name-desc" ? -order : order;
+        }).forEach(choice => filesList.appendChild(choice.closest("li")));
+        const visible = getVisibleFileChoices().length;
+        fileResults.textContent = visible + " of " + choices.length + " files";
+        noMatches.hidden = choices.length === 0 || visible !== 0;
     }
 
     function updateFileControls() {
-        const choices = getFileChoices();
+        applyFileFilter();
+        const choices = getVisibleFileChoices();
         const selectedCount = choices
                 .filter(choice => choice.checked).length;
 
-        fileActions.hidden = choices.length === 0;
-        emptyMessage.hidden = choices.length !== 0;
+        fileActions.hidden = getFileChoices().length === 0;
+        emptyMessage.hidden = getFileChoices().length !== 0;
         selectionStatus.textContent = selectedCount + " selected";
         shareSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0 || connectionState !== "connected" || !shareBaseUrl;
@@ -90,12 +118,14 @@
         deleteSelectedButton.disabled = fileActionInProgress
                 || selectedCount === 0;
         revokeSelectedButton.disabled = fileActionInProgress || selectedCount === 0;
-        selectAllButton.disabled = fileActionInProgress;
+        selectAllButton.disabled = fileActionInProgress || choices.length === 0;
+        fileSearch.disabled = fileActionInProgress;
+        fileSort.disabled = fileActionInProgress;
         choices.forEach(choice => choice.disabled = fileActionInProgress);
         selectAllButton.textContent = choices.length > 0
                 && choices.every(choice => choice.checked)
                 ? "Clear selection"
-                : "Select all";
+                : "Select all shown";
     }
 
     function downloadSelectedFiles(choices) {
@@ -284,7 +314,7 @@
                         file.filename,
                         "/share/" + file.shareToken,
                         file.shareToken,
-                        file.expirationLabel
+                        file.expirationLabel, file.sizeLabel, file.expiresAt
                 );
             });
 
@@ -314,7 +344,9 @@
             filename,
             sharePath,
             shareToken,
-            expirationLabel
+            expirationLabel,
+            sizeLabel,
+            expiresAt
     ) {
         const existingLink = findFileLink(filename);
 
@@ -328,6 +360,8 @@
             }
 
             existingItem.dataset.shareToken = shareToken;
+            if (expiresAt !== undefined) existingItem.dataset.expiresAt = expiresAt || "";
+            if (sizeLabel !== undefined) existingItem.querySelector(".file-size").textContent = sizeLabel;
             existingLink.href = "/download?filename="
                     + encodeURIComponent(filename);
 
@@ -345,6 +379,10 @@
         const details = document.createElement("span");
         const link = document.createElement("a");
         const expirationText = document.createElement("small");
+        const sizeText = document.createElement("small");
+        sizeText.className = "file-size";
+        sizeText.textContent = sizeLabel || "Checking size…";
+        listItem.dataset.expiresAt = expiresAt || "";
 
         listItem.dataset.shareToken = shareToken;
         checkbox.type = "checkbox";
@@ -361,6 +399,7 @@
         expirationText.textContent = expirationLabel;
 
         details.appendChild(link);
+        details.appendChild(sizeText);
         details.appendChild(expirationText);
         listItem.appendChild(checkbox);
         listItem.appendChild(details);
