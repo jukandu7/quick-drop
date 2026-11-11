@@ -221,6 +221,7 @@
 <p id="connection-help" hidden></p>
 <p id="owner-unlock" hidden><a href="/owner/login">Unlock owner dashboard</a></p>
 <p th:if="${localOwner}"><a href="/owner/setup">Change owner PIN</a></p>
+<p><a href="/owner/network" target="_blank" rel="noopener">Choose network address</a></p>
 <form th:if="${remoteOwnerSession}"
       action="/owner/logout"
       method="post">

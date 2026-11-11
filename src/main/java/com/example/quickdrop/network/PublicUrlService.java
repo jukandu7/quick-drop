@@ -44,6 +44,8 @@ public class PublicUrlService {
 
     public String localBaseUrl() { return origin("localhost"); }
 
+    public boolean hasPublicOverride() { return publicUrl != null; }
+
     private String origin(String host) {
         int defaultPort = https ? 443 : 80;
         return (https ? "https://" : "http://") + host + (port == defaultPort ? "" : ":" + port);

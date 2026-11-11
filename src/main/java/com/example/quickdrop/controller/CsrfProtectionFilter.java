@@ -31,7 +31,8 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
         boolean safe = SAFE_METHODS.contains(request.getMethod());
         String path = request.getRequestURI().substring(request.getContextPath().length());
         boolean page = path.equals("/") || path.equals("/owner/login")
-                || path.equals("/owner/setup") || path.matches("/receive/[^/]+") || path.equals("/send");
+                || path.equals("/owner/setup") || path.equals("/owner/network")
+                || path.matches("/receive/[^/]+") || path.equals("/send");
         HttpSession session = request.getSession(false);
         String expected = session == null ? null : (String) session.getAttribute(SESSION_TOKEN);
 

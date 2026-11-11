@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
+    <title>Network address — Quick Drop</title>
+    <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+<main>
+    <h1>Network address</h1>
+    <p><a href="/">Back to dashboard</a></p>
+    <p>Choose the address reachable by your other devices. Wi-Fi, Ethernet, and VPN connections can have different addresses.</p>
+    <p th:if="${notice}" th:text="${notice}" role="status"></p>
+    <p th:if="${error}" th:text="${error}" role="alert"></p>
+    <p>Current share address: <strong th:text="${currentUrl ?: 'No available address'}"></strong></p>
+    <p th:if="${publicOverride}">A configured public base URL controls your links. Change QUICKDROP_PUBLIC_BASE_URL and restart to use another address.</p>
+    <form th:unless="${publicOverride}" action="/owner/network" method="post">
+        <input type="hidden" name="_csrf" th:value="${csrfToken}">
+        <label for="network-address">Network adapter address</label>
+        <select id="network-address" name="address">
+            <option value="" th:selected="${selectedAddress == ''}">Automatic (prefer private LAN addresses)</option>
+            <option th:if="${selectionMissing}" th:value="${selectedAddress}" selected
+                    th:text="${selectedAddress + ' — unavailable'}"></option>
+            <option th:each="choice : ${addresses}" th:value="${choice.address()}"
+                    th:text="${choice.label()}" th:selected="${choice.address() == selectedAddress}"></option>
+        </select>
+        <button type="submit">Use address</button>
+    </form>
+    <p th:if="${selectionMissing}">Your selected adapter address is unavailable. Reconnect it or choose another address.</p>
+    <p>Selections apply until Quick Drop restarts. Set QUICKDROP_NETWORK_ADDRESS before starting the app to keep a preferred address across restarts.</p>
+    <p>Automatic selection cannot guarantee reachability. Check the displayed link on another device. For HTTPS, the selected address must be covered by your certificate.</p>
+    <p>Previously copied links keep their original address. Generate new links after changing networks.</p>
+</main>
+</body>
+</html>

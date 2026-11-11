@@ -156,6 +156,22 @@ node --test src/test/javascript/*.test.cjs
 
 ## Troubleshooting
 
+Use **Choose network address** on the owner dashboard to select a Wi-Fi, Ethernet,
+or VPN address. It opens a separate tab so current uploads can continue. Selection
+affects newly generated device, guest, and file links through the shared URL builder.
+Other dashboards pick it up on their next status refresh. Already copied links are
+unchanged. If a selected address disappears, Quick Drop stops advertising it instead
+of switching silently to another adapter.
+
+Dashboard selections last until restart. Set `QUICKDROP_NETWORK_ADDRESS` (for example,
+`192.168.1.20`) or `quickdrop.network-address` for a startup preference. An unavailable
+configured address produces no share URL until it returns or you choose another one.
+`QUICKDROP_PUBLIC_BASE_URL` takes precedence and disables the adapter selector; use it
+for a hostname or a manually configured origin. Automatic detection inspects active
+IPv4 adapters locally, prefers non-virtual private addresses, and never routes toward
+an external DNS server. VPNs can also use private addresses, so verify the chosen URL
+from another device. HTTPS certificates must cover the chosen address or hostname.
+
 Access requires owner permissions by default, including newly added routes and resources.
 Only the explicit guest routes and current static assets in `OwnerAccessFilter` bypass
 owner authentication, for their listed HTTP methods. Guest links still enforce their
