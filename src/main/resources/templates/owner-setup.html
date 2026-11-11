@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Set owner PIN — Quick Drop</title>
     <style>
@@ -92,6 +93,12 @@
            th:text="${error}"></p>
 
         <form action="/owner/setup" method="post">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <label th:if="${configured}" for="current-pin">Current owner PIN</label>
+            <input th:if="${configured}" id="current-pin" class="pin-input"
+                   name="currentPin" type="password" inputmode="numeric"
+                   pattern="[0-9]{4}" minlength="4" maxlength="4"
+                   autocomplete="current-password" required>
             <label for="pin">New owner PIN</label>
             <input id="pin"
                    class="pin-input"

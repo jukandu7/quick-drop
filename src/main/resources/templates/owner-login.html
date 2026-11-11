@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Owner access — Quick Drop</title>
     <style>
@@ -84,6 +85,7 @@
         </p>
 
         <form action="/owner/login" method="post">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
             <label for="pin">Owner PIN</label>
             <input id="pin"
                    class="pin-input"

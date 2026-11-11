@@ -106,6 +106,20 @@ class OwnerPinServiceTests {
         assertThat(pinService.matches("0123")).isTrue();
     }
 
+    @Test
+    void changingPinRequiresCurrentPinAndInitialSetupDoesNot() throws Exception {
+        pinService.updatePin("0123", null);
+        byte[] original = Files.readAllBytes(pinFile);
+        for (String current : new String[]{null, "", "9999", "bad"}) {
+            assertThatThrownBy(() -> pinService.updatePin("9876", current))
+                    .isInstanceOf(OwnerPinService.InvalidCurrentPinException.class);
+            assertThat(Files.readAllBytes(pinFile)).isEqualTo(original);
+        }
+        pinService.updatePin("9876", "0123");
+        assertThat(pinService.matches("9876")).isTrue();
+        assertThat(pinService.matches("0123")).isFalse();
+    }
+
     private MockHttpServletRequest remoteRequest() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("192.168.1.25");

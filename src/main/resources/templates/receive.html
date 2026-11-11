@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Send files to Quick Drop</title>
     <style>
@@ -142,6 +143,7 @@
           th:action="${uploadAction}"
           method="post"
           enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
         <div id="receive-drop-zone" tabindex="0">
             <strong>Drop one or more files here</strong>
             <p>or</p>
@@ -533,6 +535,7 @@
 
             const request = new XMLHttpRequest();
             request.open("POST", uploadForm.action);
+            request.setRequestHeader("X-CSRF-Token", document.getElementById("csrf-token").content);
             request.responseType = "json";
             setRowStatus(row, "Sending — 0%");
 

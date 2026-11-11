@@ -95,6 +95,19 @@ public class OwnerPinService {
         return MessageDigest.isEqual(pinHash, candidateHash);
     }
 
+    public synchronized void updatePin(String pin, String currentPin) throws IOException {
+        if (isConfigured() && !matches(currentPin)) {
+            throw new InvalidCurrentPinException();
+        }
+        save(pin);
+    }
+
+    public static class InvalidCurrentPinException extends IllegalArgumentException {
+        public InvalidCurrentPinException() {
+            super("Your current owner PIN is incorrect.");
+        }
+    }
+
     public synchronized void save(String pin) throws IOException {
         validate(pin);
 

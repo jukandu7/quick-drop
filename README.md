@@ -61,6 +61,8 @@ To share downloads, select files in **Receive files** and choose **Create share 
 
 Owner login allows five attempts per client before a one-minute cooldown. Repeated bursts double the cooldown up to 15 minutes; 30 minutes without an admitted attempt resets the client history. All attempts, including successful and malformed submissions, count. Across all clients, at most 30 attempts per minute and two simultaneous PIN checks are allowed. Blocked requests return HTTP 429 with a retry time. Limits use the direct connection address, are held in memory, and reset when the app restarts. Clients behind one proxy share a limit. Existing authenticated sessions and local dashboard access remain available during cooldowns.
 
+PIN changes require the current PIN once setup is complete. Forms and browser uploads include a session-bound CSRF token; requests with missing tokens or a foreign browser origin are rejected. After restarting the server or signing out, refresh old tabs before submitting another action. API clients must first load a page, retain its session cookie, and send its token as `X-CSRF-Token` (or `_csrf` for URL-encoded forms).
+
 ## Storage and configuration
 
 Settings live in [`src/main/resources/application.properties`](src/main/resources/application.properties).

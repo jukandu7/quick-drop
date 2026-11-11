@@ -51,6 +51,7 @@ public class OwnerController {
     public String setup(
             @RequestParam String pin,
             @RequestParam String confirmPin,
+            @RequestParam(required = false) String currentPin,
             HttpServletRequest request,
             HttpServletResponse response,
             Model model,
@@ -73,12 +74,29 @@ public class OwnerController {
             return "owner-setup";
         }
 
+        boolean reserved = false;
+        if (configured) {
+            long retryAfter = loginThrottle.acquire(request.getRemoteAddr());
+            if (retryAfter > 0) {
+                response.setStatus(429);
+                response.setHeader("Retry-After", Long.toString(retryAfter));
+                model.addAttribute("error", "Too many PIN attempts. Try again in " + retryAfter + " seconds.");
+                return "owner-setup";
+            }
+            reserved = true;
+        }
         try {
-            ownerPinService.save(pin);
+            ownerPinService.updatePin(pin, currentPin);
+        } catch (OwnerPinService.InvalidCurrentPinException exception) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            model.addAttribute("error", exception.getMessage());
+            return "owner-setup";
         } catch (IllegalArgumentException exception) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             model.addAttribute("error", exception.getMessage());
             return "owner-setup";
+        } finally {
+            if (reserved) loginThrottle.complete();
         }
 
         redirectAttributes.addFlashAttribute(

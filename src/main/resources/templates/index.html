@@ -2,6 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta id="csrf-token" name="csrf-token" th:content="${csrfToken}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Quick Drop</title>
     <style>
@@ -222,6 +223,7 @@
 <form th:if="${remoteOwnerSession}"
       action="/owner/logout"
       method="post">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
     <button type="submit">Lock owner dashboard</button>
 </form>
 <div id="mode-switch" role="group" aria-label="Transfer mode">
@@ -238,6 +240,7 @@
       action="/upload"
       method="post"
       enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" th:value="${csrfToken}">
 
     <div id="drop-zone" tabindex="0">
         <strong>Drop one or more files here</strong>
@@ -648,7 +651,8 @@
 
         try {
             const response = await fetch("/receive-links", {
-                method: "DELETE"
+                method: "DELETE",
+                headers: {"X-CSRF-Token": document.getElementById("csrf-token").content}
             });
             const result = await response.json();
 
@@ -683,7 +687,7 @@
         try {
             const response = await fetch("/receive-links", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
+                headers: {"Content-Type": "application/json", "X-CSRF-Token": document.getElementById("csrf-token").content},
                 body: JSON.stringify({
                     expiration: receiveExpiration.value
                 })
@@ -945,6 +949,7 @@
 
             const request = new XMLHttpRequest();
             request.open("POST", uploadForm.action);
+            request.setRequestHeader("X-CSRF-Token", document.getElementById("csrf-token").content);
             request.responseType = "json";
             setRowStatus(row, "Uploading — 0%");
 
@@ -1202,6 +1207,11 @@
         form.method = "post";
         form.action = "/download/selected";
         form.target = target.name;
+        const csrfInput = document.createElement("input");
+        csrfInput.type = "hidden";
+        csrfInput.name = "_csrf";
+        csrfInput.value = document.getElementById("csrf-token").content;
+        form.appendChild(csrfInput);
         form.hidden = true;
         choices.forEach(choice => {
             const input = document.createElement("input");
@@ -1240,7 +1250,7 @@
             if (choices.length > 1) {
                 const response = await fetch("/share/bundles", {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: {"Content-Type": "application/json", "X-CSRF-Token": document.getElementById("csrf-token").content},
                     body: JSON.stringify({tokens})
                 });
                 const result = await response.json();
@@ -1475,7 +1485,7 @@
         try {
             const response = await fetch("/files", {
                 method: "DELETE",
-                headers: {"Content-Type": "application/json"},
+                headers: {"Content-Type": "application/json", "X-CSRF-Token": document.getElementById("csrf-token").content},
                 body: JSON.stringify({tokens})
             });
             const result = await response.json();
