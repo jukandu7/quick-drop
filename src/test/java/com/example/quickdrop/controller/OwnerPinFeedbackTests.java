@@ -38,7 +38,7 @@ class OwnerPinFeedbackTests {
         accessService = mock(OwnerAccessService.class);
         when(accessService.isLocalRequest(any())).thenReturn(true);
         when(pinService.isConfigured()).thenReturn(true);
-        mvc = MockMvcBuilders.standaloneSetup(new OwnerController(accessService, pinService)).build();
+        mvc = MockMvcBuilders.standaloneSetup(new OwnerController(accessService, pinService, new LoginThrottle())).build();
     }
 
     @Test

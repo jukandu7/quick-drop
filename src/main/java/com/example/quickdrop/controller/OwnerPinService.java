@@ -87,7 +87,7 @@ public class OwnerPinService {
     }
 
     public synchronized boolean matches(String candidatePin) {
-        if (!isConfigured() || candidatePin == null) {
+        if (!isValidFormat(candidatePin) || !isConfigured()) {
             return false;
         }
 
@@ -159,11 +159,15 @@ public class OwnerPinService {
     }
 
     public void validate(String pin) {
-        if (pin == null || !pin.matches("[0-9]{4}")) {
+        if (!isValidFormat(pin)) {
             throw new IllegalArgumentException(
                     "Use exactly 4 numerical digits for the owner PIN."
             );
         }
+    }
+
+    static boolean isValidFormat(String pin) {
+        return pin != null && pin.length() == 4 && pin.matches("[0-9]{4}");
     }
 
     private byte[] deriveHash(String pin, byte[] pinSalt) {

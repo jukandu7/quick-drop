@@ -18,13 +18,16 @@ public class OwnerController {
 
     private final OwnerAccessService ownerAccessService;
     private final OwnerPinService ownerPinService;
+    private final LoginThrottle loginThrottle;
 
     public OwnerController(
             OwnerAccessService ownerAccessService,
-            OwnerPinService ownerPinService
+            OwnerPinService ownerPinService,
+            LoginThrottle loginThrottle
     ) {
         this.ownerAccessService = ownerAccessService;
         this.ownerPinService = ownerPinService;
+        this.loginThrottle = loginThrottle;
     }
 
     @GetMapping("/setup")
@@ -119,7 +122,24 @@ public class OwnerController {
 
         model.addAttribute("setupRequired", false);
 
-        if (!ownerAccessService.matchesPin(pin)) {
+        // Use the socket peer, never untrusted forwarded-IP headers.
+        long retryAfter = loginThrottle.acquire(request.getRemoteAddr());
+        response.setHeader("Cache-Control", "no-store");
+        if (retryAfter > 0) {
+            response.setStatus(429);
+            response.setHeader("Retry-After", Long.toString(retryAfter));
+            model.addAttribute("error", "Too many PIN attempts. Try again in "
+                    + retryAfter + " seconds.");
+            return "owner-login";
+        }
+
+        boolean matches;
+        try {
+            matches = OwnerPinService.isValidFormat(pin) && ownerAccessService.matchesPin(pin);
+        } finally {
+            loginThrottle.complete();
+        }
+        if (!matches) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             model.addAttribute("error", "That owner PIN is incorrect.");
             return "owner-login";
