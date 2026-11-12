@@ -155,8 +155,8 @@
                     receiveStatus.textContent = "Upload link is ready. Link could not be copied; scan the upload QR code instead.";
                 }
             }
+            receiveResult.focus({preventScroll: true});
             receiveResult.scrollIntoView({
-                behavior: "smooth",
                 block: "nearest"
             });
         } catch (error) {

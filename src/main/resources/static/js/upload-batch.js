@@ -103,7 +103,7 @@ class UploadFeedback {
         status.hidden = false;
         status.textContent = uploaded + (uploaded === 1 ? ' file confirmed.' : ' files confirmed.')
                 + (retryCount ? ' Retry is available for ' + retryCount + '. Check whether interrupted files arrived first.'
-                    : batch.hasFailures() ? 'Review the results below before choosing files again.' : 'You can safely choose another batch.');
+                    : batch.hasFailures() ? 'Review the results below before choosing files again.' : ' You can safely choose another batch.');
         const details = document.createElement('details');
         details.className = 'transfer-results';
         details.open = issues.length > 0;

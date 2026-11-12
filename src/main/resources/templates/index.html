@@ -216,8 +216,8 @@
             No active upload link.
         </p>
     </section>
-    <section id="receive-result" th:hidden="${!receivingActive}">
-        <h2>Upload link</h2>
+    <section id="receive-result" tabindex="-1" aria-labelledby="receive-result-heading" th:hidden="${!receivingActive}">
+        <h2 id="receive-result-heading">Upload link</h2>
         <img id="receive-qr" alt="QR code for uploading files only">
         <p>Send this link to someone on the same local network. Keep your owner PIN private.</p>
         <p id="receive-expiration-label" th:text="${receivingExpirationLabel}"></p>
