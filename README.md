@@ -2,6 +2,47 @@
 
 Share files between computers, phones, and tablets on your local network. Run Quick Drop on one computer, then connect your other devices through a browser using a link or QR code.
 
+## Windows executable
+
+Download the Windows ZIP from [GitHub Releases](https://github.com/jukandu7/quick-drop/releases), extract the **whole folder**, and double-click **Quick Drop.exe**. Downloads appear once a maintainer publishes a release. Java is bundled; users do not need Maven, Node.js, or a separate Java installation.
+
+The executable opens your browser. Create your owner PIN on first launch. Keep the Quick Drop console window open while transferring; close it to stop the app. If the browser does not open, visit http://localhost:8080. Stop any other running copy before launching this one.
+
+Saved files, database, PIN, and logs live in **%LOCALAPPDATA%\Quick Drop**, outside the extracted program. To update, stop Quick Drop and extract the new release into a new folder. Saved data is reused. Back up the entire data directory while the app is stopped before upgrading; database compatibility with older versions is not guaranteed. The desktop profile flushes database commits immediately to reduce the risk of losing a just-confirmed upload when the window closes.
+
+This is a portable Windows x64 ZIP, not an installer. Keep the `app` and `runtime` folders beside the EXE. The build is unsigned, so Windows may show a publisher warning. Download from the project's release page. Windows Firewall may request access for network transfers; use your trusted Private network.
+
+### Existing development data
+
+The executable starts with separate data; it does not move anything from your checkout. To migrate, stop both versions, back up the checkout's `data` and `uploads` folders together, then copy both into an **empty** `%LOCALAPPDATA%\Quick Drop` folder. Do not merge populated databases. This includes your existing owner PIN. Alternatively, set `QUICKDROP_DATA_HOME` to the chosen root containing `data` and `uploads`.
+
+### Building and publishing releases
+
+Maintainers need PowerShell 7, a Windows x64 JDK 21+ containing `jpackage`, and Node.js. GitHub Actions uses Temurin 21. From the repository root:
+
+```powershell
+$env:JAVA_HOME = 'C:\path\to\your\jdk'
+./scripts/package-windows.ps1 -Version 0.0.1
+```
+
+The script runs Java and JavaScript tests, packages the app, and smoke-tests the actual EXE without system Java. It checks first-run setup, PIN and upload persistence after an abrupt stop, and downloaded bytes, using isolated storage. Output: `target/releases/Quick-Drop-0.0.1-windows-x64.zip` and its SHA-256 checksum. Intermediate files remain under ignored `target/`.
+
+1. Commit and push the release code.
+2. Create and push a version tag (use a new version each time):
+
+```powershell
+git tag -a v0.0.1 -m "Quick Drop 0.0.1"
+git push origin v0.0.1
+```
+
+3. The **Windows release** workflow tests and packages the app, then creates a **draft release** with the ZIP, checksum, and generated notes.
+4. Open GitHub → Releases, review the draft, and click **Publish release**.
+
+For a build without a release, use Actions → Windows release → Run workflow, enter a three-part version, and download the workflow artifact. No signing secrets or personal access token are required; the draft-release job uses GitHub's built-in token.
+
+References: [jpackage](https://docs.oracle.com/en/java/javase/26/docs/specs/man/jpackage.html), [GitHub CLI release creation](https://cli.github.com/manual/gh_release_create), and [H2 commit flushing](https://h2database.com/html/commands.html#set_write_delay).
+
+
 ## Features
 
 - **Send and receive:** drag and drop files, track upload progress, and retry failed uploads.
@@ -13,7 +54,7 @@ Share files between computers, phones, and tablets on your local network. Run Qu
 - **Stay up to date:** file lists and connection status refresh automatically.
 - **Dark theme:** consistent styling across the dashboard, guest upload page, and PIN pages.
 
-## Requirements
+## Requirements for running from source
 
 - A Java Development Kit (JDK), version 21 or newer.
 - Internet access for the initial Maven and dependency downloads.

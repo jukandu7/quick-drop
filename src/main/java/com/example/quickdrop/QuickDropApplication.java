@@ -9,7 +9,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class QuickDropApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(QuickDropApplication.class, args);
+		SpringApplication application = new SpringApplication(QuickDropApplication.class);
+		if (Boolean.getBoolean("quickdrop.desktop")) {
+			com.example.quickdrop.desktop.DesktopLauncher.configure(application);
+		}
+		application.run(args);
 	}
 
 }

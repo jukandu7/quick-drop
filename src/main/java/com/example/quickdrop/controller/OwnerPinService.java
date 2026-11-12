@@ -36,6 +36,12 @@ public class OwnerPinService {
         this(Path.of("data", "owner-auth.properties"));
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public OwnerPinService(@org.springframework.beans.factory.annotation.Value(
+            "${quickdrop.owner-auth-file:data/owner-auth.properties}") String pinFile) {
+        this(Path.of(pinFile));
+    }
+
     OwnerPinService(Path pinFile) {
         this.pinFile = pinFile.toAbsolutePath().normalize();
     }
