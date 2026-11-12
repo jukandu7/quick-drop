@@ -33,7 +33,7 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
           $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.Substring(1) } else { $env:INPUT_VERSION }
-          ./scripts/package-windows.ps1 -Version $version
+          ./scripts/package-windows.ps1 -Version $version -IncludeInstaller
       - uses: actions/upload-artifact@v4
         with:
           name: quick-drop-windows
@@ -50,10 +50,10 @@ jobs:
         with:
           name: quick-drop-windows
           path: release-assets
-      - name: Publish GitHub release
+      - name: Create draft GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --generate-notes --title "Quick Drop $RELEASE_TAG"
+          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --draft --generate-notes --title "Quick Drop $RELEASE_TAG"

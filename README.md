@@ -4,13 +4,13 @@ Share files between computers, phones, and tablets on your local network. Run Qu
 
 ## Windows executable
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/jukandu7/quick-drop/releases), extract the **whole folder**, and double-click **Quick Drop.exe**. Downloads appear once a maintainer publishes a release. Java is bundled; users do not need Maven, Node.js, or a separate Java installation.
+From [GitHub Releases](https://github.com/jukandu7/quick-drop/releases), download **Quick-Drop-VERSION-windows-x64-setup.exe** for the Windows installer. Run it, then open Quick Drop from the Start menu. Alternatively, download the portable Windows ZIP, extract the **whole folder**, and double-click **Quick Drop.exe**. Downloads appear once a maintainer publishes a release. Both options bundle Java; users do not need Maven, Node.js, or a separate Java installation.
 
 The executable opens your browser. Create your owner PIN on first launch. Keep the Quick Drop console window open while transferring; close it to stop the app. If the browser does not open, visit http://localhost:8080. Stop any other running copy before launching this one.
 
-Saved files, database, PIN, and logs live in **%LOCALAPPDATA%\Quick Drop**, outside the extracted program. To update, stop Quick Drop and extract the new release into a new folder. Saved data is reused. Back up the entire data directory while the app is stopped before upgrading; database compatibility with older versions is not guaranteed. The desktop profile flushes database commits immediately to reduce the risk of losing a just-confirmed upload when the window closes.
+Saved files, database, PIN, and logs live in **%LOCALAPPDATA%\Quick Drop**, outside the program folder. To update, stop Quick Drop and run the newer installer, or extract the newer portable ZIP into a new folder. Saved data is reused. Back up the entire data directory while the app is stopped before upgrading; database compatibility with older versions is not guaranteed. The desktop profile flushes database commits immediately to reduce the risk of losing a just-confirmed upload when the window closes.
 
-This is a portable Windows x64 ZIP, not an installer. Keep the `app` and `runtime` folders beside the EXE. The build is unsigned, so Windows may show a publisher warning. Download from the project's release page. Windows Firewall may request access for network transfers; use your trusted Private network.
+The installer and portable ZIP target Windows x64. For the portable version, keep the `app` and `runtime` folders beside the EXE; that launcher is not a standalone download. Builds are unsigned, so Windows may show a publisher warning. Download from the project's release page. Windows Firewall may request access for network transfers; use your trusted Private network.
 
 ### Existing development data
 
@@ -18,11 +18,12 @@ The executable starts with separate data; it does not move anything from your ch
 
 ### Building and publishing releases
 
-Maintainers need PowerShell 7, a Windows x64 JDK 21+ containing `jpackage`, and Node.js. GitHub Actions uses Temurin 21. From the repository root:
+Maintainers need PowerShell 7, a Windows x64 JDK 21+ containing `jpackage`, and Node.js. GitHub Actions uses Temurin 21 and the runner's WiX toolset to build both formats. Local installer builds additionally require a compatible WiX toolset on PATH (WiX 3 for JDK 21). From the repository root:
 
 ```powershell
 $env:JAVA_HOME = 'C:\path\to\your\jdk'
 ./scripts/package-windows.ps1 -Version 0.0.1
+# Add -IncludeInstaller to also produce the setup EXE and its checksum.
 ```
 
 The script runs Java and JavaScript tests, packages the app, and smoke-tests the actual EXE without system Java. It checks first-run setup, PIN and upload persistence after an abrupt stop, and downloaded bytes, using isolated storage. Output: `target/releases/Quick-Drop-0.0.1-windows-x64.zip` and its SHA-256 checksum. Intermediate files remain under ignored `target/`.
@@ -30,8 +31,8 @@ The script runs Java and JavaScript tests, packages the app, and smoke-tests the
 1. Test your changes, then commit them in GitHub Desktop.
 2. Open **History**, right-click the release commit, and choose **Create Tag…**. Enter a new version such as `v0.0.2` (never reuse an existing release tag).
 3. Click **Push origin** to push the commit and tag.
-4. The **Windows release** workflow tests and packages the app, then **automatically publishes a release** with the Windows ZIP, checksum, and generated notes. Pushing a version tag is the publishing action; there is no manual draft approval step.
-5. Open GitHub → **Releases** to find the downloads under **Assets**. If the workflow fails, check the failed step under **Actions**; a failed build does not publish a release.
+4. The **Windows release** workflow tests and packages the app, then creates a **draft release** with the setup EXE, portable ZIP, their SHA-256 checksums, and generated notes.
+5. Open GitHub → **Releases**, review the draft and test the downloads, then click **Publish release**. The downloads appear under **Assets**, alongside GitHub's source archives. If the workflow fails, check the failed step under **Actions**.
 
 Alternatively, after committing and pushing the code, create and push the tag from a terminal:
 
