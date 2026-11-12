@@ -50,10 +50,10 @@ jobs:
         with:
           name: quick-drop-windows
           path: release-assets
-      - name: Create draft GitHub release
+      - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --draft --generate-notes --title "Quick Drop $RELEASE_TAG"
+          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --generate-notes --title "Quick Drop $RELEASE_TAG"

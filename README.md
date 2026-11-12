@@ -27,18 +27,20 @@ $env:JAVA_HOME = 'C:\path\to\your\jdk'
 
 The script runs Java and JavaScript tests, packages the app, and smoke-tests the actual EXE without system Java. It checks first-run setup, PIN and upload persistence after an abrupt stop, and downloaded bytes, using isolated storage. Output: `target/releases/Quick-Drop-0.0.1-windows-x64.zip` and its SHA-256 checksum. Intermediate files remain under ignored `target/`.
 
-1. Commit and push the release code.
-2. Create and push a version tag (use a new version each time):
+1. Test your changes, then commit them in GitHub Desktop.
+2. Open **History**, right-click the release commit, and choose **Create Tag…**. Enter a new version such as `v0.0.2` (never reuse an existing release tag).
+3. Click **Push origin** to push the commit and tag.
+4. The **Windows release** workflow tests and packages the app, then **automatically publishes a release** with the Windows ZIP, checksum, and generated notes. Pushing a version tag is the publishing action; there is no manual draft approval step.
+5. Open GitHub → **Releases** to find the downloads under **Assets**. If the workflow fails, check the failed step under **Actions**; a failed build does not publish a release.
+
+Alternatively, after committing and pushing the code, create and push the tag from a terminal:
 
 ```powershell
-git tag -a v0.0.1 -m "Quick Drop 0.0.1"
-git push origin v0.0.1
+git tag -a v0.0.2 -m "Quick Drop 0.0.2"
+git push origin v0.0.2
 ```
 
-3. The **Windows release** workflow tests and packages the app, then creates a **draft release** with the ZIP, checksum, and generated notes.
-4. Open GitHub → Releases, review the draft, and click **Publish release**.
-
-For a build without a release, use Actions → Windows release → Run workflow, enter a three-part version, and download the workflow artifact. No signing secrets or personal access token are required; the draft-release job uses GitHub's built-in token.
+For a build without a release, use Actions → Windows release → Run workflow, enter a three-part version, and download the workflow artifact. No signing secrets or personal access token are required; the release job uses GitHub's built-in token.
 
 References: [jpackage](https://docs.oracle.com/en/java/javase/26/docs/specs/man/jpackage.html), [GitHub CLI release creation](https://cli.github.com/manual/gh_release_create), and [H2 commit flushing](https://h2database.com/html/commands.html#set_write_delay).
 
